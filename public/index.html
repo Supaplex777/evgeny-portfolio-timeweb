@@ -594,6 +594,92 @@ footer{padding:26px 24px;background:#091524;color:#b8c6d5}.footer-inner{display:
 }
 </style>
 
+
+<style id="about-interactive-styles">
+/* ===== About: animated orbital scene ===== */
+#about.about-interactive{position:relative;min-height:100vh;overflow:hidden;background:#06121d}
+#about.about-interactive>.portfolio-sidebar{z-index:30}
+#about .about-live-main{position:absolute;inset:0 0 0 282px;margin:0!important;padding:0!important;max-width:none!important;overflow:hidden;background:#06121d}
+#about .about-space-stage{position:absolute;inset:0;overflow:hidden;background-image:url('./assets/about-space.webp');background-size:cover;background-position:center center;background-repeat:no-repeat;isolation:isolate;transform:translateZ(0)}
+#about .about-space-stage::before{content:"";position:absolute;inset:-3%;z-index:1;pointer-events:none;background:
+ radial-gradient(circle at 19% 18%,rgba(88,190,255,.22) 0 1px,transparent 2px),
+ radial-gradient(circle at 67% 10%,rgba(255,255,255,.22) 0 1px,transparent 2px),
+ radial-gradient(circle at 82% 28%,rgba(93,194,255,.18) 0 1px,transparent 2px),
+ radial-gradient(circle at 44% 8%,rgba(255,255,255,.15) 0 1px,transparent 2px);
+ background-size:160px 160px,230px 230px,310px 310px,390px 390px;mix-blend-mode:screen;opacity:.55;animation:aboutStarDrift 42s linear infinite}
+#about .about-space-stage::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse at 55% 56%,rgba(17,127,220,.05),transparent 40%),linear-gradient(90deg,rgba(2,11,20,.13),transparent 15%,transparent 85%,rgba(2,10,18,.12));animation:aboutAtmosphere 7s ease-in-out infinite alternate}
+#about .about-stars{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:.65;background-image:
+ radial-gradient(circle,rgba(255,255,255,.85) 0 1px,transparent 1.4px),
+ radial-gradient(circle,rgba(86,190,255,.8) 0 1px,transparent 1.5px),
+ radial-gradient(circle,rgba(255,255,255,.65) 0 .8px,transparent 1.2px);
+ background-size:173px 167px,257px 241px,331px 307px;background-position:17px 29px,101px 63px,45px 141px;animation:aboutTwinkle 4.8s ease-in-out infinite alternate}
+#about .about-orbit-live{position:absolute;left:20.4%;top:22.3%;width:59%;height:50%;z-index:5;pointer-events:none;overflow:visible;filter:drop-shadow(0 0 5px rgba(35,164,255,.45))}
+#about .about-orbit-base{fill:none;stroke:rgba(83,189,255,.38);stroke-width:2}
+#about .about-orbit-flow{fill:none;stroke:#38b8ff;stroke-width:3;stroke-linecap:round;stroke-dasharray:34 190;animation:aboutOrbitDash 5.2s linear infinite;filter:drop-shadow(0 0 7px #29aefe)}
+#about .about-orbit-runner{fill:#d9f6ff;filter:drop-shadow(0 0 5px #fff) drop-shadow(0 0 12px #27b4ff)}
+#about .about-node-hit{position:absolute;z-index:25;width:8.8%;aspect-ratio:1;border-radius:50%;cursor:pointer;outline:none;transform:translate(-50%,-50%);transition:transform .28s ease,filter .28s ease;background:radial-gradient(circle,rgba(111,220,255,.06),rgba(0,114,209,.03) 55%,transparent 72%);box-shadow:0 0 0 0 rgba(43,177,255,.0)}
+#about .about-node-hit::before,#about .about-node-hit::after{content:"";position:absolute;border-radius:50%;inset:1px;border:1px solid rgba(82,199,255,.48);opacity:0;transition:opacity .25s ease}
+#about .about-node-hit::after{inset:-8px;border-color:rgba(70,187,255,.32)}
+#about .about-node-hit:hover,#about .about-node-hit:focus-visible{transform:translate(-50%,-50%) scale(1.09);filter:drop-shadow(0 0 15px rgba(38,173,255,.95))}
+#about .about-node-hit:hover::before,#about .about-node-hit:hover::after,#about .about-node-hit:focus-visible::before,#about .about-node-hit:focus-visible::after{opacity:1;animation:aboutNodeRipple 1.5s ease-out infinite}
+#about .about-node-hit.is-active{transform:translate(-50%,-50%) scale(1.12);filter:drop-shadow(0 0 18px #2db5ff)}
+#about .about-node-hit.is-active::before,#about .about-node-hit.is-active::after{opacity:1;animation:aboutNodePulse 1.8s ease-in-out infinite}
+#about .node-path{left:49.2%;top:30.6%}
+#about .node-values{left:29.1%;top:48.7%}
+#about .node-goals{left:68.5%;top:48.7%}
+#about .node-life{left:49.2%;top:68.2%}
+
+#about .about-detail-panel{position:absolute;z-index:20;left:7.5%;right:5.5%;bottom:5.5%;min-height:37%;max-height:48%;overflow:auto;border:1px solid rgba(80,190,255,.72);border-radius:24px;background:linear-gradient(135deg,rgba(5,26,44,.94),rgba(4,19,34,.88));box-shadow:0 0 0 1px rgba(255,255,255,.05) inset,0 22px 70px rgba(0,0,0,.48),0 0 28px rgba(31,153,238,.2);backdrop-filter:blur(18px) saturate(125%);-webkit-backdrop-filter:blur(18px) saturate(125%);opacity:0;transform:translateY(28px) scale(.985);pointer-events:none;transition:opacity .34s ease,transform .42s cubic-bezier(.2,.8,.2,1)}
+#about .about-detail-panel.is-open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+#about .about-panel-close{position:absolute;right:18px;top:14px;z-index:3;width:38px;height:38px;border:1px solid rgba(86,199,255,.35);border-radius:50%;background:rgba(7,30,49,.72);color:#dff6ff;font-size:26px;line-height:32px;cursor:pointer;transition:.2s}
+#about .about-panel-close:hover{background:rgba(22,116,180,.45);box-shadow:0 0 18px rgba(40,176,255,.35)}
+#about .about-panel-inner{padding:28px 34px 30px;color:#eaf7ff}
+#about .about-panel-title{display:flex;align-items:center;gap:14px;margin:0 48px 8px 0;font-size:clamp(26px,2.3vw,42px);line-height:1.05;color:#fff}
+#about .about-panel-sub{margin:0 0 20px;color:#a9c9dc;font-size:clamp(14px,1.15vw,18px)}
+#about .about-icon-badge{display:inline-grid;place-items:center;width:52px;height:52px;border-radius:16px;border:1px solid rgba(75,198,255,.55);background:rgba(11,87,137,.28);box-shadow:0 0 20px rgba(34,166,240,.18);font-size:26px}
+#about .about-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+#about .about-card{position:relative;min-height:126px;padding:17px 17px 15px;border:1px solid rgba(71,177,240,.48);border-radius:16px;background:linear-gradient(145deg,rgba(9,45,73,.74),rgba(7,28,48,.56));box-shadow:inset 0 1px 0 rgba(255,255,255,.04);opacity:0;transform:translateY(14px);animation:aboutCardIn .42s ease forwards}
+#about .about-card:nth-child(2){animation-delay:.06s}#about .about-card:nth-child(3){animation-delay:.12s}#about .about-card:nth-child(4){animation-delay:.18s}
+#about .about-card b{display:block;margin-bottom:7px;color:#fff;font-size:16px;line-height:1.2}
+#about .about-card p{margin:0;color:#bed0dd!important;font-size:14px!important;line-height:1.42!important}
+#about .about-card .num{display:grid;place-items:center;width:34px;height:34px;margin-bottom:10px;border-radius:50%;border:1px solid #3dbaff;color:#dff7ff;box-shadow:0 0 15px rgba(43,177,255,.35)}
+#about .about-timeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;position:relative}
+#about .about-timeline::before{content:"";position:absolute;left:4%;right:4%;top:17px;height:2px;background:linear-gradient(90deg,transparent,#2eb6ff 8%,#2eb6ff 92%,transparent);box-shadow:0 0 10px rgba(46,182,255,.45)}
+#about .about-timeline .about-card{padding-top:55px}
+#about .about-timeline .num{position:absolute;left:16px;top:0;background:#08283f;z-index:1}
+
+@keyframes aboutOrbitDash{to{stroke-dashoffset:-224}}
+@keyframes aboutNodePulse{0%,100%{box-shadow:0 0 0 0 rgba(43,177,255,.08)}50%{box-shadow:0 0 0 10px rgba(43,177,255,.08)}}
+@keyframes aboutNodeRipple{0%{transform:scale(.9);opacity:.7}100%{transform:scale(1.28);opacity:0}}
+@keyframes aboutStarDrift{to{transform:translate3d(-36px,24px,0)}}
+@keyframes aboutTwinkle{0%{opacity:.26;filter:brightness(.85)}100%{opacity:.78;filter:brightness(1.35)}}
+@keyframes aboutAtmosphere{0%{opacity:.45}100%{opacity:.85}}
+@keyframes aboutCardIn{to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:1100px){
+ #about .about-live-main{left:240px}
+ #about .about-detail-panel{left:4%;right:4%;bottom:4%;max-height:54%}
+ #about .about-cards,#about .about-timeline{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #about .about-timeline::before{display:none}
+ #about .about-timeline .about-card{padding-top:17px}.about-timeline .num{position:static!important}
+}
+@media(max-width:700px){
+ #about.about-interactive{min-height:860px}
+ #about .about-live-main{position:relative;left:auto;inset:auto;height:760px;margin:0!important}
+ #about .about-space-stage{background-position:center top}
+ #about .about-orbit-live{left:7%;top:26%;width:86%;height:42%}
+ #about .node-path{left:50%;top:33%}#about .node-values{left:21%;top:49%}#about .node-goals{left:79%;top:49%}#about .node-life{left:50%;top:65%}
+ #about .about-node-hit{width:17%}
+ #about .about-detail-panel{left:3%;right:3%;bottom:3%;max-height:58%;border-radius:18px}
+ #about .about-panel-inner{padding:24px 18px 22px}
+ #about .about-cards,#about .about-timeline{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+ #about .about-space-stage::before,#about .about-space-stage::after,#about .about-stars,#about .about-orbit-flow,#about .about-node-hit::before,#about .about-node-hit::after{animation:none!important}
+ #about .about-detail-panel,#about .about-node-hit{transition:none!important}
+}
+</style>
+
 </head>
 <body id="top">
 <!-- Desktop hero: exact approved mockup + interactive hotspots -->
@@ -661,7 +747,28 @@ footer{padding:26px 24px;background:#091524;color:#b8c6d5}.footer-inner{display:
 html.portfolio-info-open,body.portfolio-info-open{overflow:hidden!important}
 @media(max-width:700px){#skills .portfolio-sidebar,.portfolio-info .portfolio-sidebar{position:relative;width:100%;padding:16px;border-radius:0}.portfolio-brand{padding-bottom:16px}.portfolio-sidebar nav{margin-top:16px;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.portfolio-sidebar nav a{min-height:44px;padding:0 12px;font-size:14px}.portfolio-info main{margin-left:0;padding:30px 22px}#skills .skills-scene{justify-content:flex-start}#skills .skills-art{margin:auto 0}}
 @media(prefers-reduced-motion:reduce){.portfolio-sidebar nav a{transition:none}}
-</style><section class="portfolio-info" id="about" aria-label="Обо мне"><aside class="portfolio-sidebar"><a class="portfolio-brand" href="#top"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 2 12 7v14l-12 7-12-7V9z"/></svg><span><strong>Евгений Смирнов</strong><small>AI Automation Specialist</small></span></a><nav aria-label="Меню портфолио"><a href="#top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 11 8-7 8 7v9H7v-9"/></svg><span>Главная</span></a><a href="#about" class="current" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M5 21h14"/></svg><span>Обо мне</span></a><a href="#projects"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14"/></svg><span>Проекты</span></a><a href="#skills"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM7 3v18M12 3v18M17 3v18"/></svg><span>Навыки</span></a><a href="#certificates-page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM7 6h11v12H7z"/></svg><span>Сертификаты</span></a><a href="#contacts"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14"/><path d="m2 6 10 8L22 6"/></svg><span>Контакты</span></a></nav></aside><main><h1>Обо мне</h1><p>Евгений Смирнов · AI Automation Specialist</p><p>Анализирую процессы, интегрирую AI-сервисы и данные, создаю практические решения на Python, SQL, API и no-code инструментах.</p></main></section>
+</style><section class="portfolio-info about-interactive" id="about" aria-label="Обо мне"><aside class="portfolio-sidebar"><a class="portfolio-brand" href="#top"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 2 12 7v14l-12 7-12-7V9z"/></svg><span><strong>Евгений Смирнов</strong><small>AI Automation Specialist</small></span></a><nav aria-label="Меню портфолио"><a href="#top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 11 8-7 8 7v9H7v-9"/></svg><span>Главная</span></a><a href="#about" class="current" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M5 21h14"/></svg><span>Обо мне</span></a><a href="#projects"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14"/></svg><span>Проекты</span></a><a href="#skills"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM7 3v18M12 3v18M17 3v18"/></svg><span>Навыки</span></a><a href="#certificates-page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM7 6h11v12H7z"/></svg><span>Сертификаты</span></a><a href="#contacts"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14"/><path d="m2 6 10 8L22 6"/></svg><span>Контакты</span></a></nav></aside><main class="about-live-main" aria-label="Интерактивный раздел обо мне">
+  <div class="about-space-stage" id="aboutSpaceStage">
+    <div class="about-stars" aria-hidden="true"></div>
+    <svg class="about-orbit-live" viewBox="0 0 1000 620" preserveAspectRatio="none" aria-hidden="true">
+      <ellipse class="about-orbit-base" cx="500" cy="315" rx="295" ry="155"></ellipse>
+      <ellipse class="about-orbit-flow" cx="500" cy="315" rx="295" ry="155"></ellipse>
+      <circle class="about-orbit-runner" r="5">
+        <animateMotion dur="7s" repeatCount="indefinite" path="M205,315 A295,155 0 1,1 795,315 A295,155 0 1,1 205,315"></animateMotion>
+      </circle>
+    </svg>
+
+    <div class="about-node-hit node-path" data-about-tab="path" role="button" tabindex="0" aria-label="Открыть: Мой путь"></div>
+    <div class="about-node-hit node-values" data-about-tab="values" role="button" tabindex="0" aria-label="Открыть: Мои ценности"></div>
+    <div class="about-node-hit node-goals" data-about-tab="goals" role="button" tabindex="0" aria-label="Открыть: Куда я иду"></div>
+    <div class="about-node-hit node-life" data-about-tab="life" role="button" tabindex="0" aria-label="Открыть: Вне работы"></div>
+
+    <section class="about-detail-panel" id="aboutDetailPanel" aria-live="polite" aria-hidden="true">
+      <button class="about-panel-close" type="button" aria-label="Закрыть">×</button>
+      <div class="about-panel-inner" id="aboutPanelInner"></div>
+    </section>
+  </div>
+</main></section>
 <section class="portfolio-info" id="projects" aria-label="Проекты"><aside class="portfolio-sidebar"><a class="portfolio-brand" href="#top"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 2 12 7v14l-12 7-12-7V9z"/></svg><span><strong>Евгений Смирнов</strong><small>AI Automation Specialist</small></span></a><nav aria-label="Меню портфолио"><a href="#top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 11 8-7 8 7v9H7v-9"/></svg><span>Главная</span></a><a href="#about"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M5 21h14"/></svg><span>Обо мне</span></a><a href="#projects" class="current" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14"/></svg><span>Проекты</span></a><a href="#skills"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM7 3v18M12 3v18M17 3v18"/></svg><span>Навыки</span></a><a href="#certificates-page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM7 6h11v12H7z"/></svg><span>Сертификаты</span></a><a href="#contacts"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14"/><path d="m2 6 10 8L22 6"/></svg><span>Контакты</span></a></nav></aside><main><h1>Проекты</h1><p>Список проектов пока не заполнен.</p></main></section>
 <section class="portfolio-info" id="contacts" aria-label="Контакты"><aside class="portfolio-sidebar"><a class="portfolio-brand" href="#top"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="m16 2 12 7v14l-12 7-12-7V9z"/></svg><span><strong>Евгений Смирнов</strong><small>AI Automation Specialist</small></span></a><nav aria-label="Меню портфолио"><a href="#top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 11 8-7 8 7v9H7v-9"/></svg><span>Главная</span></a><a href="#about"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="3"/><path d="M6 21v-3a6 6 0 0 1 12 0v3M5 21h14"/></svg><span>Обо мне</span></a><a href="#projects"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14"/></svg><span>Проекты</span></a><a href="#skills"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM7 3v18M12 3v18M17 3v18"/></svg><span>Навыки</span></a><a href="#certificates-page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM7 6h11v12H7z"/></svg><span>Сертификаты</span></a><a href="#contacts" class="current" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14"/><path d="m2 6 10 8L22 6"/></svg><span>Контакты</span></a></nav></aside><main><h1>Контакты</h1><p>Электронная почта<br><a href="mailto:cmrrus@rambler.ru">cmrrus@rambler.ru</a></p><p>Telegram<br><a href="https://t.me/SupaplexEVG" target="_blank" rel="noopener noreferrer">@SupaplexEVG</a></p></main></section><style id="skills-page-styles">
 #skills{display:none;position:fixed;inset:0;z-index:11000;overflow:auto;background:#060d14;color:#eff8ff;font-family:Arial,Helvetica,sans-serif}
@@ -2986,6 +3093,81 @@ new ResizeObserver(fit).observe(art);window.addEventListener('resize',fit);docum
       send.disabled=false;send.textContent='Спросить';
     }
   });
+})();
+</script>
+
+
+<script id="about-interactive-script">
+(()=>{
+  const about=document.getElementById('about');
+  if(!about) return;
+  const stage=about.querySelector('#aboutSpaceStage');
+  const panel=about.querySelector('#aboutDetailPanel');
+  const inner=about.querySelector('#aboutPanelInner');
+  const close=about.querySelector('.about-panel-close');
+  const nodes=[...about.querySelectorAll('[data-about-tab]')];
+  if(!stage||!panel||!inner||!nodes.length) return;
+
+  const content={
+    path:{icon:'⚑',title:'Мой путь',sub:'От любопытства к реальным решениям',type:'timeline',items:[
+      ['Первые шаги','Начало профессионального пути и поиск практичных решений.'],
+      ['Переход к технологиям','Работа с цифровыми инструментами, данными и API.'],
+      ['Python, AI и автоматизация','Изучение Python и AI для выстраивания рабочих процессов.'],
+      ['Собственные решения','Создание AI-проектов, автоматизаций и полезных продуктов.']
+    ]},
+    values:{icon:'✦',title:'Мои ценности',sub:'Принципы, на которых строю работу',items:[
+      ['Постоянное развитие','Учусь, расширяю кругозор и осваиваю новые инструменты.'],
+      ['Практический подход','Ищу понятные решения, которые работают в реальной задаче.'],
+      ['Реальная польза','Технологии должны решать задачи, а не усложнять их.'],
+      ['Обучение через проекты','Закрепляю знания, создавая работающие продукты.']
+    ]},
+    goals:{icon:'↗',title:'Куда я иду',sub:'Мои цели и направление развития',items:[
+      ['AI Automation Specialist','Углублять экспертизу и делать процессы быстрее и умнее.'],
+      ['Интеллектуальные системы','Создавать практические AI-решения под реальные задачи.'],
+      ['Автоматизация процессов','Переводить ручные операции в устойчивые рабочие системы.'],
+      ['Данные и AI','Совмещать автоматизацию, аналитику и искусственный интеллект.']
+    ]},
+    life:{icon:'◎',title:'Вне работы',sub:'Что меня вдохновляет вне задач',items:[
+      ['Книги','Люблю читать, узнавать новое и расширять кругозор.'],
+      ['Саморазвитие','Постоянно учусь и стараюсь становиться сильнее.'],
+      ['Новые технологии','Слежу за инструментами, которые меняют жизнь и работу.'],
+      ['Личные интересы','Ценю идеи, эксперименты, баланс и время для перезагрузки.']
+    ]}
+  };
+
+  function render(key){
+    const d=content[key]; if(!d) return;
+    nodes.forEach(n=>n.classList.toggle('is-active',n.dataset.aboutTab===key));
+    const cards=d.items.map((it,i)=>`<article class="about-card"><span class="num">${i+1}</span><b>${it[0]}</b><p>${it[1]}</p></article>`).join('');
+    inner.innerHTML=`<h2 class="about-panel-title"><span class="about-icon-badge">${d.icon}</span>${d.title}</h2><p class="about-panel-sub">${d.sub}</p><div class="${d.type==='timeline'?'about-timeline':'about-cards'}">${cards}</div>`;
+    panel.classList.remove('is-open');
+    panel.setAttribute('aria-hidden','false');
+    requestAnimationFrame(()=>requestAnimationFrame(()=>panel.classList.add('is-open')));
+  }
+  function hide(){
+    panel.classList.remove('is-open');
+    panel.setAttribute('aria-hidden','true');
+    nodes.forEach(n=>n.classList.remove('is-active'));
+  }
+  nodes.forEach(n=>{
+    n.addEventListener('click',()=>render(n.dataset.aboutTab));
+    n.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();render(n.dataset.aboutTab)}});
+  });
+  close?.addEventListener('click',hide);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel.classList.contains('is-open')) hide()});
+
+  // Very light parallax: background remains calm, only tiny movement.
+  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!reduce && window.matchMedia('(pointer:fine)').matches){
+    let raf=0;
+    stage.addEventListener('pointermove',e=>{
+      const r=stage.getBoundingClientRect();
+      const x=(e.clientX-r.left)/r.width-.5, y=(e.clientY-r.top)/r.height-.5;
+      cancelAnimationFrame(raf);
+      raf=requestAnimationFrame(()=>{stage.style.backgroundPosition=`calc(50% + ${x*-5}px) calc(50% + ${y*-3}px)`});
+    });
+    stage.addEventListener('pointerleave',()=>{stage.style.backgroundPosition='center center'});
+  }
 })();
 </script>
 
