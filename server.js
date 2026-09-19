@@ -1,10 +1,25 @@
 const express = require('express');
+const helmet = require('helmet');
+const { rateLimit } = require('express-rate-limit');
 const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+app.use(helmet({
+  // The existing single-page frontend uses inline styles/scripts and data images.
+  // Keep those working until a nonce-based CSP can be introduced separately.
+  contentSecurityPolicy: false
+}));
 app.use(express.json({ limit: '256kb' }));
+app.use((error, req, res, next) => {
+  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+    return res.status(400).json({ error: 'Некорректный JSON.' });
+  }
+  return next(error);
+});
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1h',
   etag: true
@@ -14,17 +29,33 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rhzxaaaszbuwrjgucrev.s
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_V2h_WY-l64ymLw8-u3jL5w_RNbLnLSf';
 const POLZA_API_URL = 'https://polza.ai/api/v1/chat/completions';
 
-app.post('/api/ai', async (req, res) => {
-  try {
-    if (!process.env.POLZA_API_KEY) {
-      return res.status(500).json({ error: 'POLZA_API_KEY не настроен на сервере.' });
-    }
+const aiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Слишком много запросов. Попробуйте снова через несколько минут.' }
+});
 
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    uptime: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.post('/api/ai', aiRateLimiter, async (req, res) => {
+  try {
     const question = String(req.body?.question || '').trim().slice(0, 1000);
     const context = String(req.body?.context || '').trim().slice(0, 20000);
 
     if (!question) {
       return res.status(400).json({ error: 'Пустой вопрос.' });
+    }
+
+    if (!process.env.POLZA_API_KEY) {
+      return res.status(500).json({ error: 'POLZA_API_KEY не настроен на сервере.' });
     }
 
     let certificatesContext = '';
@@ -35,7 +66,8 @@ app.post('/api/ai', async (req, res) => {
           headers: {
             apikey: SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
-          }
+          },
+          signal: AbortSignal.timeout(5000)
         }
       );
 
@@ -103,7 +135,8 @@ app.post('/api/ai', async (req, res) => {
         Authorization: `Bearer ${process.env.POLZA_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(30000)
     });
 
     const raw = await upstream.text();
@@ -123,6 +156,9 @@ app.post('/api/ai', async (req, res) => {
     return res.json({ answer: String(answer) });
   } catch (error) {
     console.error(error);
+    if (error?.name === 'TimeoutError' || error?.name === 'AbortError') {
+      return res.status(504).json({ error: 'AI-сервис не ответил вовремя. Попробуйте позже.' });
+    }
     return res.status(500).json({ error: 'Внутренняя ошибка сервера.' });
   }
 });
