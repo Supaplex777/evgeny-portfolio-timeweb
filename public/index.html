@@ -7,7 +7,7 @@
   <title>Евгений Смирнов — портфолио</title>
   <style>
 :root{--ink:#0c1a2f;--blue:#1678d3;--blue2:#50a7ed;--soft:#eef5fb;--line:#dce6f0;--warm:#c69b6d;--max:1200px;--shadow:0 20px 60px rgba(27,57,87,.12)}
-*{box-sizing:border-box}html{min-height:100%;scroll-behavior:smooth;background:#050b12}body{margin:0;font-family:Arial,Helvetica,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink);background:#050b12;line-height:1.6;min-height:100vh;min-height:100dvh;overflow-x:hidden}a{color:inherit}.skip{position:absolute;left:-9999px}.skip:focus{left:12px;top:12px;background:white;padding:10px 14px;z-index:1000}.hero{position:relative;width:100%;min-height:100vh;min-height:100dvh;background:#050b12;overflow:hidden}.hero-art{display:block;width:100%;height:auto}.hotspots{position:absolute;inset:0;z-index:8}.hero-nav{position:absolute;left:24.5%;top:0;width:40%;height:9%;display:flex;align-items:center;justify-content:center;gap:clamp(18px,2.1vw,42px);padding:0 1.5%;background:rgba(245,250,255,.86);z-index:12}.hero-nav a{position:relative;display:inline-flex;align-items:center;height:100%;padding:0 .2em;color:#14243b;text-decoration:none;font-size:clamp(.78rem,1.08vw,1.25rem);font-weight:500;white-space:nowrap;cursor:pointer}.hero-nav a::after{content:"";position:absolute;left:.2em;right:.2em;bottom:22%;height:2px;background:#1376d5;transform:scaleX(0);transform-origin:center;transition:transform .2s ease}.hero-nav a:hover::after,.hero-nav a:focus-visible::after{transform:scaleX(1)}.hero-nav a:focus-visible{outline:2px solid #1376d5;outline-offset:3px;border-radius:3px}@media(max-width:900px){.hero-nav{display:none}}
+*{box-sizing:border-box}html{min-height:100%;scroll-behavior:smooth;background:#050b12}body{margin:0;font-family:Arial,Helvetica,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink);background:#050b12;line-height:1.6;min-height:100vh;min-height:100dvh;overflow-x:hidden}a{color:inherit}.skip{position:absolute;left:-9999px}.skip:focus{left:12px;top:12px;background:white;padding:10px 14px;z-index:1000}.hero{position:relative;width:100%;min-height:100vh;min-height:100dvh;background:#050b12;overflow:hidden}.hero-art{display:block;width:100%;height:auto}.hotspots{position:absolute;inset:0;z-index:8}.hero-nav{position:absolute;left:24.5%;top:0;width:40%;height:9%;display:flex;align-items:center;justify-content:center;gap:clamp(18px,2.1vw,42px);padding:0 1.5%;background:transparent;z-index:12}.hero-nav a{position:relative;display:inline-flex;align-items:center;height:100%;padding:0 .2em;color:#14243b;text-decoration:none;font-size:clamp(.78rem,1.08vw,1.25rem);font-weight:500;white-space:nowrap;cursor:pointer}.hero-nav a::after{content:"";position:absolute;left:.2em;right:.2em;bottom:22%;height:2px;background:#1376d5;transform:scaleX(0);transform-origin:center;transition:transform .2s ease}.hero-nav a:hover::after,.hero-nav a:focus-visible::after{transform:scaleX(1)}.hero-nav a:focus-visible{outline:2px solid #1376d5;outline-offset:3px;border-radius:3px}@media(max-width:900px){.hero-nav{display:none}}
 .hotspot{position:absolute;display:block;border-radius:16px;outline:none!important;-webkit-tap-highlight-color:transparent;overflow:hidden;cursor:pointer;transition:transform .24s ease,box-shadow .24s ease,background-color .24s ease,opacity .24s ease,filter .24s ease}
 .hotspot::before,.hotspot::after{content:"";position:absolute;pointer-events:none;border-radius:inherit}
 .hotspot::before{inset:0;opacity:0;transition:opacity .28s ease,transform .58s ease}
@@ -759,7 +759,7 @@ html.about-open #about .about-space-stage::before,html.about-open #about .about-
 <!-- Desktop hero: exact approved mockup + interactive hotspots -->
   <header class="hero hero-desktop" aria-label="Главная">
     <div class="space-ambience" aria-hidden="true"><canvas id="space-ambience-canvas"></canvas></div>
-    <img class="hero-art" src="assets/hero-space.webp?v=20260920" alt="Светлый футуристический кабинет с видом на Землю и Россию, монитором аналитики и интерфейсом портфолио Евгения Смирнова" />
+    <img class="hero-art" src="assets/hero-space-clean.png?v=20260920" alt="Светлый футуристический кабинет с видом на Землю и Россию, монитором аналитики и интерфейсом портфолио Евгения Смирнова" />
     
     <div class="steam-layer" aria-hidden="true"><canvas id="steam-canvas"></canvas></div>
 
@@ -799,7 +799,7 @@ html.about-open #about .about-space-stage::before,html.about-open #about .about-
     <nav class="mobile-nav" aria-label="Мобильная навигация">
       <a data-target="about" href="#about">Обо мне</a><a data-target="projects" href="#projects">Проекты</a><a data-target="skills" href="#skills">Навыки</a><a data-target="certificates-page" href="#certificates-page">Сертификаты</a><a data-target="contacts" href="#contacts">Контакты</a>
     </nav>
-    <div class="mobile-visual"><img src="assets/hero-space.webp?v=20260920" alt="Вид на Землю из светлого футуристического кабинета" /></div>
+    <div class="mobile-visual"><img src="assets/hero-space-clean.png?v=20260920" alt="Вид на Землю из светлого футуристического кабинета" /></div>
     <div class="mobile-copy">
       <p class="eyebrow">AI · AUTOMATION · DATA</p>
       <h1>Внедряю ИИ и автоматизирую <span>бизнес-процессы</span></h1>
