@@ -730,15 +730,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
       a.addEventListener('click',e=>e.preventDefault());
     }
   });
-  const navigationTargets={about:'about',projects:'projects',skills:'skills','certificates-page':'certificates-page',contacts:'contacts'};
-  document.querySelectorAll('a[data-target]').forEach(link=>link.addEventListener('click',event=>{
-    const id=navigationTargets[link.dataset.target],section=id&&document.getElementById(id);
-    if(!section)return;
-    event.preventDefault();
-    history.replaceState(null,'','#'+id);
-    section.scrollIntoView({behavior:'smooth',block:'start'});
-  }));
-  
+
 
 
   // === Monitor AI Command Center v18 ===
