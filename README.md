@@ -1,49 +1,95 @@
-# Evgeny Portfolio — Timeweb
+# Evgeny Portfolio — AI Automation Specialist
 
-Личное профессиональное портфолио с HTML/CSS/JavaScript-интерфейсом,
-Express-сервером, данными сертификатов из Supabase и серверным прокси к Polza AI.
+Интерактивное профессиональное портфолио Евгения Смирнова: AI-ассистент, проекты и сертификаты из Supabase, контактная форма и production-развёртывание на Timeweb Cloud App Platform.
+
+## Live Demo
+
+[Открыть сайт](https://supaplex777-evgeny-portfolio-timeweb-1140.twc1.net/)
+
+## Возможности
+
+- AI-панель «AI о Евгении» на Polza AI (`openai/gpt-oss-20b`)
+- интерактивный раздел «Обо мне»
+- проекты и изображения проектов из Supabase
+- управление проектами для авторизованного владельца
+- сертификаты из Supabase Storage
+- контактная форма: сохранение заявок и серверная доставка email
+- responsive-интерфейс для мобильных устройств, ноутбуков и широких экранов
+- WebP-оптимизация визуальных материалов
 
 ## Stack
 
-- Node.js
-- Express
-- HTML/CSS/JavaScript
-- Supabase
-- Polza AI
-- GPT-OSS-20B
+- HTML, CSS, JavaScript
+- Node.js, Express
+- Supabase Database, Storage и RLS
+- Polza AI, `openai/gpt-oss-20b`
+- Timeweb Cloud App Platform
+
+## Архитектура
+
+- **Frontend:** `public/index.html`, CSS/JS и WebP-ассеты.
+- **Backend:** Express, `/api/ai`, `/api/contact`, `/health`.
+- **Data:** Supabase Database, Storage и RLS-политики.
+- **Email:** Resend API вызывается только сервером, если настроены environment variables.
+
+## Безопасность
+
+- Секреты хранятся только в environment variables, не в GitHub.
+- `service_role` не используется во frontend.
+- Доступ Supabase ограничен RLS; публичные заявки не читаются из браузера.
+- `/api/ai` и `/api/contact` защищены rate limit; форма содержит honeypot и защиту от повторной отправки.
+- GitHub Secret Scanning: **No secrets found**.
 
 ## Project structure
 
 ```text
 evgeny-portfolio-timeweb/
 ├── public/
-│   └── index.html
+│   ├── index.html
+│   └── assets/
 ├── server.js
 ├── package.json
-├── .gitignore
+├── package-lock.json
 ├── .env.example
+├── .gitignore
 └── README.md
 ```
-
-## Environment variables
-
-- `POLZA_API_KEY` — обязательная секретная переменная для запросов к Polza AI.
-- `SUPABASE_URL` — URL проекта Supabase; при необходимости переопределяет значение по умолчанию.
-- `SUPABASE_PUBLISHABLE_KEY` — публичный клиентский ключ Supabase; при необходимости переопределяет значение по умолчанию. Доступ к данным должен быть защищен Row Level Security (RLS).
-
-Never commit `.env` or API secrets to GitHub.
-
-Скопируйте `.env.example` в `.env` и заполните значения только в локальном окружении или в настройках платформы.
 
 ## Local run
 
 ```bash
-npm install
+npm ci
 npm start
 ```
 
-По умолчанию приложение доступно на `http://localhost:3000`. На хостинге сервер использует порт из переменной `PORT`.
+Приложение будет доступно на `http://localhost:3000`.
 
-## Deployment
+## Environment variables
 
-Проект предназначен для Timeweb App Platform. Используйте Node.js 20 или новее и команду запуска `npm start`.
+```text
+POLZA_API_KEY
+SUPABASE_URL
+SUPABASE_PUBLISHABLE_KEY
+CONTACT_EMAIL_TO
+RESEND_API_KEY
+CONTACT_EMAIL_FROM
+PORT
+```
+
+`RESEND_API_KEY` и `CONTACT_EMAIL_FROM` нужны только для автоматической отправки заявок на email. Адрес отправителя должен быть подтверждён в Resend. Никогда не добавляйте `.env` или реальные ключи в GitHub.
+
+## Production
+
+- Branch: `main`
+- Hosting: Timeweb Cloud App Platform
+- Start command: `npm start`
+- Health check: `/health`
+
+## Author
+
+Евгений Смирнов — AI Automation Specialist
+
+- GitHub: [Supaplex777](https://github.com/Supaplex777)
+- Telegram: [@SupaplexEVG](https://t.me/SupaplexEVG)
+- Email: [cmrrus@rambler.ru](mailto:cmrrus@rambler.ru)
+- Kwork: [supaplexevg](https://kwork.ru/user/supaplexevg)
