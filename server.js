@@ -37,12 +37,116 @@ const aiRateLimiter = rateLimit({
   message: { error: 'Слишком много запросов. Попробуйте снова через несколько минут.' }
 });
 
+const contactRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Слишком много заявок. Попробуйте снова немного позже.' }
+});
+
+const recentContactRequests = new Map();
+const cleanText = (value, maxLength) => String(value || '')
+  .replace(/[\u0000-\u001F\u007F]/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .slice(0, maxLength);
+
+const escapeHtml = (value) => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#039;');
+
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
     uptime: Math.floor(process.uptime()),
     timestamp: new Date().toISOString()
   });
+});
+
+app.post('/api/contact', contactRateLimiter, async (req, res) => {
+  const name = cleanText(req.body?.name, 80);
+  const contact = cleanText(req.body?.contact, 160);
+  const projectType = cleanText(req.body?.project_type, 80);
+  const message = cleanText(req.body?.message, 2000);
+  const honeypot = cleanText(req.body?.company, 120);
+
+  // Pretend success for bots without storing or sending anything.
+  if (honeypot) return res.status(204).end();
+  if (name.length < 2 || contact.length < 3 || message.length < 10) {
+    return res.status(400).json({ error: 'Заполните имя, контакты и описание задачи.' });
+  }
+
+  const fingerprint = `${req.ip}|${name.toLowerCase()}|${contact.toLowerCase()}|${message.toLowerCase()}`;
+  const now = Date.now();
+  if (recentContactRequests.get(fingerprint) > now - 10 * 60 * 1000) {
+    return res.status(409).json({ error: 'Такая заявка уже была отправлена. Проверьте почту или напишите в Telegram.' });
+  }
+
+  try {
+    const saveResponse = await fetch(`${SUPABASE_URL}/rest/v1/contact_requests`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal'
+      },
+      body: JSON.stringify({
+        name,
+        contact,
+        project_type: projectType || 'Другое',
+        message
+      }),
+      signal: AbortSignal.timeout(8000)
+    });
+
+    if (!saveResponse.ok) {
+      console.error('Contact request was not saved:', saveResponse.status, await saveResponse.text());
+      return res.status(502).json({ error: 'Не удалось принять заявку. Попробуйте позже или напишите в Telegram.' });
+    }
+
+    recentContactRequests.set(fingerprint, now);
+    for (const [key, createdAt] of recentContactRequests) {
+      if (createdAt < now - 15 * 60 * 1000) recentContactRequests.delete(key);
+    }
+
+    const resendKey = process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY;
+    const recipient = process.env.CONTACT_EMAIL_TO || 'cmrrus@rambler.ru';
+    const sender = process.env.CONTACT_EMAIL_FROM;
+    let emailSent = false;
+
+    if (resendKey && sender) {
+      const pageUrl = cleanText(req.get('origin') || req.get('referer') || '', 500) || 'Не указан';
+      const emailResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: sender,
+          to: [recipient],
+          subject: 'Новая заявка с сайта-портфолио',
+          text: `Имя: ${name}\nКонтакт: ${contact}\nТип проекта: ${projectType || 'Другое'}\n\nОписание:\n${message}\n\nДата UTC: ${new Date().toISOString()}\nURL сайта: ${pageUrl}`,
+          html: `<h2>Новая заявка с сайта-портфолио</h2><p><b>Имя:</b> ${escapeHtml(name)}<br><b>Контакт:</b> ${escapeHtml(contact)}<br><b>Тип проекта:</b> ${escapeHtml(projectType || 'Другое')}</p><p><b>Описание:</b><br>${escapeHtml(message).replace(/\n/g, '<br>')}</p><p><b>Дата UTC:</b> ${new Date().toISOString()}<br><b>URL сайта:</b> ${escapeHtml(pageUrl)}</p>`
+        }),
+        signal: AbortSignal.timeout(10000)
+      });
+      emailSent = emailResponse.ok;
+      if (!emailSent) console.error('Contact email was not sent:', emailResponse.status, await emailResponse.text());
+    } else {
+      console.warn('Contact request saved, but Resend is not configured.');
+    }
+
+    return res.status(201).json({ ok: true, emailSent });
+  } catch (error) {
+    console.error('Contact request error:', error);
+    return res.status(500).json({ error: 'Не удалось обработать заявку. Попробуйте позже или напишите в Telegram.' });
+  }
 });
 
 app.post('/api/ai', aiRateLimiter, async (req, res) => {
