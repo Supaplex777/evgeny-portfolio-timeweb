@@ -2,6 +2,7 @@ const express = require('express');
 const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
 const path = require('path');
+const { createTerraIntelRouter, terraIntelPageHeaders } = require('./lib/terraintel');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,8 +19,13 @@ app.use((error, req, res, next) => {
   if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
     return res.status(400).json({ error: 'Некорректный JSON.' });
   }
+  if (error?.type === 'entity.too.large' && req.path.startsWith('/api/terraintel/')) {
+    return res.status(413).json({ error: 'Слишком большой запрос к AI TerraIntel.' });
+  }
   return next(error);
 });
+// TerraIntel MVP frontend lives in public/terraintel (served at /terraintel/).
+app.use('/terraintel', terraIntelPageHeaders);
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1h',
   etag: true
@@ -266,6 +272,9 @@ app.post('/api/ai', aiRateLimiter, async (req, res) => {
     return res.status(500).json({ error: 'Внутренняя ошибка сервера.' });
   }
 });
+
+// TerraIntel AI backend (separate prompt, model, limits). Must stay above the SPA fallback.
+app.use('/api/terraintel', createTerraIntelRouter());
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

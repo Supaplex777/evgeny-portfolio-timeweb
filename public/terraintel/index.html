@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ТерраИнтел — учебный сайт</title>
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.css">
+<link rel="stylesheet" href="/terraintel/vendor/maplibre-gl.css">
 <style>
 
 
@@ -475,6 +475,7 @@ function normalizeTerraAnomaly(a){
   item.risk_score=robustZ>0?calculatedScore:Math.max(1,Math.min(10,Number(item.risk_score)||1));
   item.risk_level=terraPriorityLevel(item.risk_score);
   const failed=!item.explanation || /(?:не вернул|недоступн|неверн(?:ый|ом) формат|ошибк)/i.test(String(item.explanation));
+  item.ai_source=failed?'local':(item.ai_source||'llm');
   if(failed){
     const z=item.robust_z??item.max_abs_robust_z??item.z_score??'—';
     item.explanation='Зафиксировано статистическое отклонение магнитного сигнала (|Robust Z| = '+z+'). По одной магнитометрии тип, происхождение и опасность источника не определяются.';
@@ -483,14 +484,14 @@ function normalizeTerraAnomaly(a){
   return item;
 }
 function terraCurrentReport(){
-  let p=null; try{p=JSON.parse(localStorage.getItem(TERRA_PROJECT_KEY)||'null')}catch(e){}
-  if(!p||!p.nodulResult)return null;
-  return {p,r:p.nodulResult,anomalies:(p.nodulResult.anomalies||[]).map(normalizeTerraAnomaly)};
+  let p=null; try{p=terraLoadProject()}catch(e){}
+  if(!p||!p.analysisResult)return null;
+  return {p,r:p.analysisResult,anomalies:(p.analysisResult.anomalies||[]).map(normalizeTerraAnomaly)};
 }
 function terraPrintableReport(){
   const data=terraCurrentReport(); if(!data)return '';
   const {p,r,anomalies}=data,esc=window.safeText||((v)=>String(v??''));
-  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>TerraIntel — ${esc(p.name)}</title><style>@page{size:A4;margin:16mm}body{font:14px/1.5 Arial,sans-serif;color:#17263b}h1{font-size:24px;margin:0 0 4px}.muted{color:#718096}.summary{margin:18px 0;padding:14px;border:1px solid #d8cdfa;border-radius:10px;background:#faf8ff}.card{page-break-inside:avoid;border-top:1px solid #dfe6ef;padding:14px 0}.badge{float:right;font-weight:700}.note{margin-top:24px;color:#718096;font-size:11px}</style></head><body><h1>TerraIntel — анализ магнитометрии</h1><div class="muted">Проект: ${esc(p.name)} · ${esc(p.area||'Территория не указана')}</div><div class="summary"><b>Резюме ИИ</b><br>Обработано ${esc(r.input?.magnetometer_rows||0)} магнитометрических и ${esc(r.input?.gps_rows||0)} GPS-строк. Синхронизация: ${esc(Math.round(Number(r.sync_quality||0)*100))}%. Найдено аномалий: ${esc(r.total_anomalies||anomalies.length)}.</div><h2>Аномалии и рекомендации</h2>${anomalies.map(a=>`<section class="card"><b>${esc(a.id)}</b><span class="badge">${esc(a.risk_level)} · ${esc(a.risk_score)}/10</span><p>${esc(a.explanation)}</p><small>${esc(a.recommendation)}</small></section>`).join('')}<p class="note">Автоматизированный анализ вспомогательный и не заменяет экспертное заключение.</p></body></html>`;
+  return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>TerraIntel — ${esc(p.name)}</title><style>@page{size:A4;margin:16mm}body{font:14px/1.5 Arial,sans-serif;color:#17263b}h1{font-size:24px;margin:0 0 4px}.muted{color:#718096}.summary{margin:18px 0;padding:14px;border:1px solid #d8cdfa;border-radius:10px;background:#faf8ff}.card{page-break-inside:avoid;border-top:1px solid #dfe6ef;padding:14px 0}.badge{float:right;font-weight:700}.note{margin-top:24px;color:#718096;font-size:11px}</style></head><body><h1>TerraIntel — анализ магнитометрии</h1><div class="muted">Проект: ${esc(p.name)} · ${esc(p.area||'Территория не указана')}</div><div class="summary"><b>Резюме ИИ</b><br>Обработано ${esc(r.input?.magnetometer_rows||0)} магнитометрических и ${esc(r.input?.gps_rows||0)} GPS-строк. Синхронизация: ${esc(terraSyncLabel(r))}. Найдено аномалий: ${esc(r.total_anomalies||anomalies.length)}.</div><h2>Аномалии и рекомендации</h2>${anomalies.map(a=>`<section class="card"><b>${esc(a.id)}</b><span class="badge">${esc(a.risk_level)} · ${esc(a.risk_score)}/10</span><p>${esc(a.explanation)}</p><small>${esc(a.recommendation)}</small></section>`).join('')}<p class="note">Автоматизированный анализ вспомогательный и не заменяет экспертное заключение.</p></body></html>`;
 }
 function terraOpenPdf(printNow=false){
   const html=terraPrintableReport(); if(!html)return;
@@ -502,18 +503,18 @@ function terraDownload(name,type,text){const a=document.createElement('a');a.hre
 function terraExportCsv(){const d=terraCurrentReport();if(!d)return;const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const rows=[['id','latitude','longitude','robust_z','risk_level','risk_score','explanation','recommendation'],...d.anomalies.map(a=>[a.id,a.lat,a.lon,a.robust_z,a.risk_level,a.risk_score,a.explanation,a.recommendation])];terraDownload('terraintel-anomalies.csv','text/csv;charset=utf-8','\ufeff'+rows.map(r=>r.map(q).join(',')).join('\n'))}
 function terraExportGeoJson(){const d=terraCurrentReport();if(!d)return;const out={type:'FeatureCollection',features:d.anomalies.filter(a=>Number.isFinite(Number(a.lon))&&Number.isFinite(Number(a.lat))).map(a=>({type:'Feature',geometry:{type:'Point',coordinates:[Number(a.lon),Number(a.lat)]},properties:{id:a.id,robust_z:a.robust_z,risk_level:a.risk_level,risk_score:a.risk_score,explanation:a.explanation,recommendation:a.recommendation}}))};terraDownload('terraintel-anomalies.geojson','application/geo+json;charset=utf-8',JSON.stringify(out,null,2))}
 function renderTerraReports(){
-  let p; try{p=JSON.parse(localStorage.getItem(TERRA_PROJECT_KEY)||'null')}catch(e){}
-  if(!p || !p.nodulResult) return;
-  const r=p.nodulResult, anomalies=Array.isArray(r.anomalies)?r.anomalies.map(normalizeTerraAnomaly):[], esc=window.safeText||((v)=>String(v??''));
+  let p; try{p=terraLoadProject()}catch(e){}
+  if(!p || !p.analysisResult) return;
+  const r=p.analysisResult, anomalies=Array.isArray(r.anomalies)?r.anomalies.map(normalizeTerraAnomaly):[], esc=window.safeText||((v)=>String(v??''));
   const list=document.querySelector('#reports .report-list-empty');
   if(list){ list.className='report-list'; list.innerHTML=`<div class="report-row"><div><b>${esc(p.name||'TerraIntel отчёт')}</b><small>${esc(p.area||'Территория не указана')}</small></div><span class="status ready-pill">Готов</span><b>${esc(r.total_anomalies||anomalies.length)} аномалии</b><button class="zero-primary" onclick="document.querySelector('#reports .report-preview').scrollIntoView({behavior:'smooth'})">Открыть</button></div>`; }
   const preview=document.querySelector('#reports .report-preview');
-  if(preview){ preview.innerHTML=`<div class="report-doc"><h3>${esc(r.report_data?.title||'TerraIntel — отчёт об анализе')}</h3><p class="report-muted">Проект: ${esc(p.name)} · ${esc(p.area||'территория не указана')}</p><div class="report-summary"><b>Резюме ИИ</b><p>Обработано ${esc(r.input?.magnetometer_rows||0)} магнитометрических и ${esc(r.input?.gps_rows||0)} GPS-строк. Синхронизация: ${esc(Math.round(Number(r.sync_quality||0)*100))}%. Найдено аномалий: ${esc(r.total_anomalies||anomalies.length)}.</p></div><div class="pdf-actions"><button class="zero-primary" onclick="terraOpenPdf(false)">Открыть PDF</button><button class="zero-secondary" onclick="terraOpenPdf(true)">Скачать PDF</button></div><h4>Аномалии и рекомендации</h4>${anomalies.map(a=>`<article class="anomaly-card"><div><b>${esc(a.id)}</b><span class="risk-${esc(a.risk_level||'medium')}">${esc(a.risk_level||'medium')} · ${esc(a.risk_score??'—')}/10</span></div><p>${esc(a.explanation||'Интерпретация отсутствует.')}</p><small>${esc(a.recommendation||'Требуется экспертная проверка.')}</small></article>`).join('')}<p class="report-disclaimer">Автоматизированный анализ вспомогательный и не заменяет экспертное заключение.</p></div>`; }
+  if(preview){ preview.innerHTML=`<div class="report-doc"><h3>${esc(r.report_data?.title||'TerraIntel — отчёт об анализе')}</h3><p class="report-muted">Проект: ${esc(p.name)} · ${esc(p.area||'территория не указана')}</p><div class="report-summary"><b>Резюме ИИ</b><p>Обработано ${esc(r.input?.magnetometer_rows||0)} магнитометрических и ${esc(r.input?.gps_rows||0)} GPS-строк. Синхронизация: ${esc(terraSyncLabel(r))}. Найдено аномалий: ${esc(r.total_anomalies||anomalies.length)}.</p></div><div class="pdf-actions"><button class="zero-primary" onclick="terraOpenPdf(false)">Открыть отчёт</button><button class="zero-secondary" onclick="terraOpenPdf(true)" title="Открывает системный диалог печати браузера — там можно выбрать «Сохранить как PDF»">Печать / PDF (через браузер)</button></div><h4>Аномалии и рекомендации</h4>${anomalies.map(a=>`<article class="anomaly-card"><div><b>${esc(a.id)}</b><span class="risk-${esc(a.risk_level||'medium')}">${esc(a.risk_level||'medium')} · ${esc(a.risk_score??'—')}/10</span></div><p>${esc(a.explanation||'Интерпретация отсутствует.')}</p><small>${esc(a.recommendation||'Требуется экспертная проверка.')}</small></article>`).join('')}<p class="report-disclaimer">Автоматизированный анализ вспомогательный и не заменяет экспертное заключение.</p></div>`; }
   const openBtn=document.querySelector('#reports .rp-head button');if(openBtn){openBtn.disabled=false;openBtn.onclick=()=>terraOpenPdf(false)}
   const exports=document.querySelectorAll('#reports .export-grid button');if(exports.length>=6){exports[0].disabled=false;exports[0].onclick=()=>terraOpenPdf(true);exports[3].disabled=false;exports[3].onclick=terraExportGeoJson;exports[4].disabled=false;exports[4].onclick=terraExportCsv}
-  const box=document.querySelector('#reports .ai-report-box p'); if(box) box.textContent='ИИ-резюме сформировано локальным анализом и Polza/GigaChat. Для каждой аномалии показаны приоритет проверки, объяснение и рекомендация.';
+  const box=document.querySelector('#reports .ai-report-box p'); if(box) box.textContent=r.ai_status==='failed'?('Аномалии найдены локальным статистическим анализом. AI-интерпретация недоступна ('+(r.ai_error||'ошибка сервиса')+'), поэтому показаны локальные объяснения. Требуется экспертная проверка.'):('Резюме сформировано локальным анализом и AI-интерпретацией ('+(r.model||'—')+'). Для каждой аномалии показаны приоритет проверки, объяснение и рекомендация. Требуется экспертная проверка.');
   const vals=document.querySelectorAll('#reports .report-metrics strong'); if(vals.length>=3){vals[0].textContent='1';vals[1].textContent='0';vals[2].textContent='1';}
-  const info=document.querySelector('#reports .report-info-list'); if(info) info.innerHTML=`<div><span>Статус</span><b>Готов</b></div><div><span>Тип отчёта</span><b>MVP / ИИ-анализ</b></div><div><span>Создан</span><b>${esc(r.generated_at||'сейчас')}</b></div><div><span>Проект</span><b>${esc(p.name)}</b></div><div><span>Модель</span><b>Polza / GigaChat 2</b></div>`;
+  const info=document.querySelector('#reports .report-info-list'); if(info) info.innerHTML=`<div><span>Статус</span><b>Готов</b></div><div><span>Тип отчёта</span><b>MVP / ИИ-анализ</b></div><div><span>Создан</span><b>${esc(r.generated_at||'сейчас')}</b></div><div><span>Проект</span><b>${esc(p.name)}</b></div><div><span>Модель</span><b>${esc(r.model||'—')}</b></div>`;
 }
 function openDev(name){
   if(name === 'Создание проекта'){ openProjectModal(); return; }
@@ -1135,7 +1136,7 @@ function filterProjects(){
           <div class="rp-head"><h2>Экспорт отчёта</h2></div>
           <div class="export-section">
             <div class="export-grid">
-              <button disabled>PDF</button>
+              <button disabled title="Печать через браузер (можно сохранить как PDF)">PDF (печать)</button>
               <button disabled>DOCX</button>
               <button disabled>XLSX</button>
               <button disabled>GeoJSON</button>
@@ -1212,7 +1213,7 @@ function filterProjects(){
   </div>
 </div>
 
-<script src="https://unpkg.com/maplibre-gl@5.7.1/dist/maplibre-gl.js"></script>
+<script src="/terraintel/vendor/maplibre-gl.js"></script>
 <script>
 let terraMapLibre = null;
 const TERRA_MAPTILER_KEY = 'FdlOg3dN3jgdVJmjemKM';
@@ -1257,8 +1258,82 @@ showPage = function(page){
   }
 };
 
-const TERRA_PROJECT_KEY = 'terrainel_mvp_project_v11';
-const TERRA_AI_ENDPOINT = 'https://terraintel-ai.onegineugen777.workers.dev/api/analyze';
+const TERRA_PROJECT_KEY = 'terraintel_mvp_project_v13';
+// Previous storage keys: read once and migrated; the old entry is left untouched as a backup.
+const TERRA_LEGACY_PROJECT_KEYS = ['terrainel_mvp_project_v11'];
+// Same-origin AI endpoint on the Timeweb Express server (no Cloudflare Worker).
+// For local experiments a different backend can be set via window.TERRA_AI_ENDPOINT_OVERRIDE before this script.
+const TERRA_AI_ENDPOINT = window.TERRA_AI_ENDPOINT_OVERRIDE || '/api/terraintel/analyze';
+const TERRA_AI_TIMEOUT_MS = 45000;
+let terraMemoryProject = null;
+function terraMigrateProject(p){
+  if(p && p.nodulResult && !p.analysisResult) p.analysisResult = p.nodulResult;
+  if(p) delete p.nodulResult;
+  return p;
+}
+function terraLoadProject(){
+  let p = null;
+  try{ p = JSON.parse(localStorage.getItem(TERRA_PROJECT_KEY) || 'null'); }catch(e){ p = null; }
+  if(!p){
+    for(const key of TERRA_LEGACY_PROJECT_KEYS){
+      try{ const old = JSON.parse(localStorage.getItem(key) || 'null'); if(old){ p = old; break; } }catch(e){}
+    }
+    if(p){
+      terraMigrateProject(p);
+      try{ localStorage.setItem(TERRA_PROJECT_KEY, JSON.stringify(p)); }catch(e){}
+    }
+  }
+  return terraMigrateProject(p) || terraMemoryProject;
+}
+function terraSaveProject(p){
+  terraMemoryProject = p;
+  try{ localStorage.setItem(TERRA_PROJECT_KEY, JSON.stringify(p)); return true; }
+  catch(e){ console.warn('TerraIntel: localStorage недоступен, проект хранится только до перезагрузки страницы.', e); return false; }
+}
+// Real GPS synchronisation quality: share of magnetometer samples that have a GPS fix
+// within a tolerance of 2 median GPS intervals. Without timestamps it is NOT computed.
+function terraSyncStats(mag, gps){
+  const total = mag.length;
+  const gt = gps.map(g=>g.time).filter(Number.isFinite).sort((a,b)=>a-b);
+  const withTime = mag.filter(m=>Number.isFinite(m.time));
+  if(gt.length < 2 || !withTime.length){
+    return {method:'index', quality:null, total, note:'нет временных меток — сопоставление по порядку строк'};
+  }
+  const steps = []; for(let i=1;i<gt.length;i++){ const d = gt[i]-gt[i-1]; if(d>0) steps.push(d); }
+  const step = terraMedian(steps) || 1;
+  const tolerance = 2*step;
+  const deltas = [];
+  for(const m of withTime){
+    let lo = 0, hi = gt.length-1;
+    while(lo < hi){ const mid = (lo+hi)>>1; if(gt[mid] < m.time) lo = mid+1; else hi = mid; }
+    let d = Math.abs(gt[lo]-m.time); if(lo>0) d = Math.min(d, Math.abs(gt[lo-1]-m.time));
+    if(d <= tolerance) deltas.push(d);
+  }
+  const matched = deltas.length;
+  const msScale = gt[0] > 1e11;
+  return {
+    method:'time', quality:Number((matched/Math.max(1,total)).toFixed(3)), total, matched,
+    unmatched: total-matched, median_dt: terraMedian(deltas), tolerance, time_unit: msScale ? 'ms' : 'raw'
+  };
+}
+function terraSyncLabel(r){
+  const s = r && r.sync;
+  if(!s || s.quality === null || s.quality === undefined || !Number.isFinite(Number(s.quality))){
+    return 'не рассчитано' + (s && s.note ? ' (' + s.note + ')' : '');
+  }
+  let text = Math.round(Number(s.quality)*100) + '% (' + s.matched + ' из ' + s.total + ' точек';
+  if(s.time_unit === 'ms' && Number.isFinite(s.median_dt)) text += ', медиана Δt ' + (s.median_dt/1000).toFixed(2) + ' с';
+  return text + ')';
+}
+function terraAiStatusLabel(r){
+  if(!r || r.status !== 'completed') return 'не запускался';
+  switch(r.ai_status){
+    case 'failed': return 'недоступен — показаны локальные объяснения' + (r.ai_error ? ' (' + r.ai_error + ')' : '');
+    case 'partial': return 'завершён частично';
+    case 'skipped': return 'не требовался (аномалий нет)';
+    default: return 'завершён';
+  }
+}
 function openProjectModal(){
   const m=document.getElementById('projectModal');
   if(m) m.classList.add('show');
@@ -1267,9 +1342,10 @@ function closeProjectModal(){
   const m=document.getElementById('projectModal');
   if(m) m.classList.remove('show');
 }
-function projectToast(text){
+function projectToast(text,ms){
   const t=document.getElementById('projectToast'); if(!t)return;
-  t.textContent=text; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2600);
+  clearTimeout(projectToast._timer);
+  t.textContent=text; t.classList.add('show'); projectToast._timer=setTimeout(()=>t.classList.remove('show'),ms||2600);
 }
 function safeText(v){return String(v||'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));}
 function terraDelimiter(line){
@@ -1317,10 +1393,20 @@ function terraDetect(mag,gps,threshold){
   return peaks.slice(0,20).map((p,i)=>{const g=terraNearestGps(p,gps,mag.length)||{};return {id:'TI-'+String(i+1).padStart(3,'0'),lat:g.lat,lon:g.lon,robust_z:Number(Math.abs(p.robust_z).toFixed(3)),sample_index:p.index,timestamp:p.time};});
 }
 async function terraInterpret(project,anomalies){
-  if(!anomalies.length)return {llm_interpretations:[],model:'локальный анализ'};
-  const response=await fetch(TERRA_AI_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({project,anomalies})});
-  const raw=await response.text();let data;try{data=JSON.parse(raw);}catch{throw new Error('Сервер ИИ вернул ответ не в формате JSON.');}
-  if(!response.ok)throw new Error(data.error||('Ошибка сервера ИИ: HTTP '+response.status));
+  if(!anomalies.length)return {llm_interpretations:[],model:'локальный анализ',ai_status:'skipped'};
+  // Only prepared anomaly fields are sent — never the raw CSV.
+  const payload={project,anomalies:anomalies.map(a=>({id:a.id,lat:a.lat,lon:a.lon,robust_z:a.robust_z,sample_index:a.sample_index,timestamp:a.timestamp}))};
+  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),TERRA_AI_TIMEOUT_MS);
+  let response;
+  try{response=await fetch(TERRA_AI_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:ctrl.signal});}
+  catch(e){throw new Error(e&&e.name==='AbortError'?'AI-сервис не ответил вовремя':'нет связи с сервером TerraIntel');}
+  finally{clearTimeout(timer);}
+  const raw=await response.text();let data=null;try{data=JSON.parse(raw);}catch{}
+  if(!response.ok){
+    const byStatus={400:'сервер отклонил данные аномалий',413:'слишком большой запрос',429:'превышен лимит AI-запросов, попробуйте позже',500:'ошибка сервера TerraIntel',502:'AI-сервис недоступен или вернул некорректный ответ',504:'AI-сервис не ответил вовремя'};
+    throw new Error((data&&data.error)||byStatus[response.status]||('HTTP '+response.status));
+  }
+  if(!data||!Array.isArray(data.llm_interpretations))throw new Error('сервер вернул ответ в неверном формате');
   return data;
 }
 async function createTerraProject(ev){
@@ -1336,17 +1422,22 @@ async function createTerraProject(ev){
   try{
     const [magRows,gpsRows]=await Promise.all([magFile.text().then(terraCsv),gpsFile.text().then(terraCsv)]);
     const mag=terraPrepareMag(magRows),gps=terraPrepareGps(gpsRows);if(!mag.length||!gps.length)throw new Error('В одном из CSV нет пригодных строк.');
-    const anomalies=terraDetect(mag,gps,threshold);projectToast(anomalies.length?'Получаем интерпретацию Polza…':'Аномалии не обнаружены.');
-    const ai=await terraInterpret({name,area,description,threshold},anomalies),byId=new Map((ai.llm_interpretations||[]).map(x=>[String(x.id),x]));
+    const anomalies=terraDetect(mag,gps,threshold),sync=terraSyncStats(mag,gps);projectToast(anomalies.length?'Получаем AI-интерпретацию…':'Аномалии не обнаружены.');
+    // AI is not on the critical path: if it fails, locally detected anomalies are kept.
+    let ai={llm_interpretations:[],model:'локальный анализ',ai_status:'skipped'},aiStatus=anomalies.length?'ok':'skipped',aiError='';
+    if(anomalies.length){try{ai=await terraInterpret({name,area,description,threshold},anomalies);aiStatus=ai.ai_status||'ok';}catch(aiEx){aiStatus='failed';aiError=String(aiEx?.message||aiEx);console.warn('TerraIntel AI:',aiEx);}}
+    const aiModel=aiStatus==='failed'?'локальный анализ (AI недоступен)':(ai.model||'—'),byId=new Map((ai.llm_interpretations||[]).map(x=>[String(x.id),x]));
     const merged=anomalies.map(a=>normalizeTerraAnomaly({...a,...(byId.get(String(a.id))||{})}));
-    const result={status:'completed',analysis_status:'completed',total_anomalies:merged.length,sync_quality:1,input:{magnetometer_rows:magRows.length,gps_rows:gpsRows.length},anomalies:merged,generated_at:new Date().toISOString(),model:ai.model||'Polza / GigaChat 2',report_data:{title:'TerraIntel — анализ магнитометрии'}};
-    project.status='Анализ завершён';project.nodulResult=result;project.totalAnomalies=merged.length;project.syncQuality=1;
-    localStorage.setItem(TERRA_PROJECT_KEY,JSON.stringify(project));renderTerraProject(project);closeProjectModal();showPage('projects');renderNodulAnomaliesOnMap(merged);projectToast('Анализ завершён. Аномалий: '+merged.length);
+    const result={status:'completed',analysis_status:'completed',total_anomalies:merged.length,sync_quality:sync.quality,sync,ai_status:aiStatus,ai_error:aiError,input:{magnetometer_rows:magRows.length,gps_rows:gpsRows.length},anomalies:merged,generated_at:new Date().toISOString(),model:aiModel,report_data:{title:'TerraIntel — анализ магнитометрии'}};
+    project.status=aiStatus==='failed'?'Анализ завершён (без AI)':'Анализ завершён';project.analysisResult=result;project.totalAnomalies=merged.length;project.syncQuality=sync.quality;
+    terraSaveProject(project);renderTerraProject(project);closeProjectModal();showPage('projects');renderTerraAnomaliesOnMap(merged);
+    if(aiStatus==='failed')projectToast('Аномалий найдено: '+merged.length+'. AI-интерпретация недоступна ('+aiError+') — показаны локальные объяснения.',7000);
+    else projectToast('Анализ завершён. Аномалий: '+merged.length);
   }catch(ex){project.status='Ошибка анализа';err.textContent='Не удалось выполнить анализ: '+(ex?.message||ex);err.classList.add('show');console.error('TerraIntel standalone:',ex);}
   finally{if(submit){submit.disabled=false;submit.textContent='Создать проект';}}
 }
 function renderTerraProject(p){
-  const r=p.nodulResult||{};
+  const r=p.analysisResult||{};
   const completed=r.status==='completed';
   const anomalies=Array.isArray(r.anomalies)?r.anomalies.map(normalizeTerraAnomaly):[];
   const maxPriority=anomalies.reduce((max,a)=>Math.max(max,Number(a.risk_score)||0),0);
@@ -1365,35 +1456,35 @@ function renderTerraProject(p){
   showProjectDetails();
 }
 function showProjectDetails(){
-  let p; try{p=JSON.parse(localStorage.getItem(TERRA_PROJECT_KEY)||'null')}catch(e){}
+  let p; try{p=terraLoadProject()}catch(e){}
   if(!p)return;
   const panel=document.querySelector('#projects .project-detail-panel'); if(!panel)return;
-  const r=p.nodulResult||{};
-  const sync=(r.sync_quality===0||r.sync_quality)?Math.round(Number(r.sync_quality)*100)+'%':'—';
+  const r=p.analysisResult||{};
+  const sync=terraSyncLabel(r);
   const anomalies=(r.total_anomalies===0||r.total_anomalies)?r.total_anomalies:'—';
-  const ai=r.status==='completed'?'завершён':'не запускался';
-  panel.innerHTML=`<div class="project-detail-live"><h3>${safeText(p.name)}</h3><p>${safeText(p.description||'Проект TerraIntel MVP: магнитометрия + GPS/ГЛОНАСС.')}</p><div class="pdl-list"><div class="pdl-item"><span>Территория</span><b>${safeText(p.area)}</b></div><div class="pdl-item"><span>Магнитометрия</span><b>✓ ${safeText(p.magnetometer.name)}</b></div><div class="pdl-item"><span>GPS / ГЛОНАСС</span><b>✓ ${safeText(p.gps.name)}</b></div><div class="pdl-item"><span>Порог аномалии</span><b>${p.threshold}</b></div><div class="pdl-item"><span>Синхронизация</span><b>${sync}</b></div><div class="pdl-item"><span>ИИ-анализ</span><b>${ai}</b></div><div class="pdl-item"><span>Найдено аномалий</span><b>${anomalies}</b></div></div><div class="pdl-actions"><button class="pdl-primary" onclick="showPage('map');setTimeout(()=>renderNodulAnomaliesOnMap((p.nodulResult||{}).anomalies||[]),180)">Открыть на карте</button><button class="pdl-outline" onclick="openProjectModal()">Новый анализ</button></div></div>`;
+  const ai=terraAiStatusLabel(r);
+  panel.innerHTML=`<div class="project-detail-live"><h3>${safeText(p.name)}</h3><p>${safeText(p.description||'Проект TerraIntel MVP: магнитометрия + GPS/ГЛОНАСС.')}</p><div class="pdl-list"><div class="pdl-item"><span>Территория</span><b>${safeText(p.area)}</b></div><div class="pdl-item"><span>Магнитометрия</span><b>✓ ${safeText(p.magnetometer.name)}</b></div><div class="pdl-item"><span>GPS / ГЛОНАСС</span><b>✓ ${safeText(p.gps.name)}</b></div><div class="pdl-item"><span>Порог аномалии</span><b>${p.threshold}</b></div><div class="pdl-item"><span>Синхронизация</span><b>${sync}</b></div><div class="pdl-item"><span>ИИ-анализ</span><b>${ai}</b></div><div class="pdl-item"><span>Найдено аномалий</span><b>${anomalies}</b></div></div><div class="pdl-actions"><button class="pdl-primary" onclick="showPage('map');setTimeout(()=>renderTerraAnomaliesOnMap((p.analysisResult||{}).anomalies||[]),180)">Открыть на карте</button><button class="pdl-outline" onclick="openProjectModal()">Новый анализ</button></div></div>`;
 }
-function renderNodulAnomaliesOnMap(anomalies){
+function renderTerraAnomaliesOnMap(anomalies){
   if(!Array.isArray(anomalies)||!anomalies.length)return;
   anomalies=anomalies.map(normalizeTerraAnomaly);
   initTerraMap();
   if(!terraMapLibre)return;
   const draw=()=>{
-    const features=anomalies.filter(a=>Number.isFinite(Number(a.lon))&&Number.isFinite(Number(a.lat))).map(a=>({type:'Feature',geometry:{type:'Point',coordinates:[Number(a.lon),Number(a.lat)]},properties:{id:a.id||'',risk_level:a.risk_level||'',risk_score:a.risk_score??'',robust_z:a.robust_z??a.max_abs_robust_z??a.z_score??'',lat:Number(a.lat),lon:Number(a.lon),explanation:a.explanation||'',recommendation:a.recommendation||''}}));
+    const features=anomalies.filter(a=>Number.isFinite(Number(a.lon))&&Number.isFinite(Number(a.lat))).map(a=>({type:'Feature',geometry:{type:'Point',coordinates:[Number(a.lon),Number(a.lat)]},properties:{id:a.id||'',risk_level:a.risk_level||'',risk_score:a.risk_score??'',robust_z:a.robust_z??a.max_abs_robust_z??a.z_score??'',lat:Number(a.lat),lon:Number(a.lon),explanation:a.explanation||'',recommendation:a.recommendation||'',ai_source:a.ai_source||''}}));
     if(!features.length)return;
     const banner=document.querySelector('#map .map-empty-banner');if(banner)banner.style.display='none';
     const layerRow=document.getElementById('anomaliesLayerRow');if(layerRow)layerRow.classList.add('live');
     const layerCount=document.getElementById('anomaliesLayerCount');if(layerCount)layerCount.textContent=features.length+' объектов';
     const data={type:'FeatureCollection',features};
-    if(terraMapLibre.getSource('nodul-anomalies')) terraMapLibre.getSource('nodul-anomalies').setData(data);
+    if(terraMapLibre.getSource('terraintel-anomalies')) terraMapLibre.getSource('terraintel-anomalies').setData(data);
     else{
-      terraMapLibre.addSource('nodul-anomalies',{type:'geojson',data});
-      terraMapLibre.addLayer({id:'nodul-anomalies-layer',type:'circle',source:'nodul-anomalies',paint:{'circle-radius':9,'circle-stroke-width':2,'circle-stroke-color':'#ffffff','circle-color':['match',['get','risk_level'],'high','#d64545','medium','#e0a020','low','#3b9b72','#6f58d9']}});
-      terraMapLibre.addLayer({id:'nodul-anomalies-labels',type:'symbol',source:'nodul-anomalies',layout:{'text-field':['get','id'],'text-size':12,'text-offset':[0,1.4],'text-anchor':'top','text-allow-overlap':true},paint:{'text-color':'#172238','text-halo-color':'#ffffff','text-halo-width':2}});
-      terraMapLibre.on('click','nodul-anomalies-layer',e=>{const f=e.features&&e.features[0];if(!f)return;const pr=f.properties||{};showAnomalyMapDetails(pr);new maplibregl.Popup({offset:12}).setLngLat(f.geometry.coordinates).setHTML(`<b>${safeText(pr.id||'Аномалия')}</b><br>Приоритет проверки: ${safeText(pr.risk_level||'—')} · ${safeText(pr.risk_score||'—')}/10<br>Robust Z: ${safeText(pr.robust_z||'—')}<br><small>Нажмите для подробной карточки</small>`).addTo(terraMapLibre);});
-      terraMapLibre.on('mouseenter','nodul-anomalies-layer',()=>terraMapLibre.getCanvas().style.cursor='pointer');
-      terraMapLibre.on('mouseleave','nodul-anomalies-layer',()=>terraMapLibre.getCanvas().style.cursor='');
+      terraMapLibre.addSource('terraintel-anomalies',{type:'geojson',data});
+      terraMapLibre.addLayer({id:'terraintel-anomalies-layer',type:'circle',source:'terraintel-anomalies',paint:{'circle-radius':9,'circle-stroke-width':2,'circle-stroke-color':'#ffffff','circle-color':['match',['get','risk_level'],'high','#d64545','medium','#e0a020','low','#3b9b72','#6f58d9']}});
+      terraMapLibre.addLayer({id:'terraintel-anomalies-labels',type:'symbol',source:'terraintel-anomalies',layout:{'text-field':['get','id'],'text-size':12,'text-offset':[0,1.4],'text-anchor':'top','text-allow-overlap':true},paint:{'text-color':'#172238','text-halo-color':'#ffffff','text-halo-width':2}});
+      terraMapLibre.on('click','terraintel-anomalies-layer',e=>{const f=e.features&&e.features[0];if(!f)return;const pr=f.properties||{};showAnomalyMapDetails(pr);new maplibregl.Popup({offset:12}).setLngLat(f.geometry.coordinates).setHTML(`<b>${safeText(pr.id||'Аномалия')}</b><br>Приоритет проверки: ${safeText(pr.risk_level||'—')} · ${safeText(pr.risk_score||'—')}/10<br>Robust Z: ${safeText(pr.robust_z||'—')}<br><small>Нажмите для подробной карточки</small>`).addTo(terraMapLibre);});
+      terraMapLibre.on('mouseenter','terraintel-anomalies-layer',()=>terraMapLibre.getCanvas().style.cursor='pointer');
+      terraMapLibre.on('mouseleave','terraintel-anomalies-layer',()=>terraMapLibre.getCanvas().style.cursor='');
     }
     const b=new maplibregl.LngLatBounds();features.forEach(f=>b.extend(f.geometry.coordinates));terraMapLibre.fitBounds(b,{padding:80,maxZoom:15,duration:700});showAnomalyMapDetails(features[0].properties);
   };
@@ -1401,10 +1492,10 @@ function renderNodulAnomaliesOnMap(anomalies){
 }
 function showAnomalyMapDetails(a){
   const panel=document.querySelector('#map .map-detail');if(!panel)return;
-  panel.innerHTML=`<div class="anomaly-detail"><div class="anomaly-detail-head"><div class="anomaly-detail-id">${safeText(a.id||'Аномалия')}</div><span class="anomaly-risk-badge">приоритет ${safeText(a.risk_level||'—')} · ${safeText(a.risk_score||'—')}/10</span></div><div class="sub">Результат автоматизированного анализа</div><div class="anomaly-detail-grid"><div class="anomaly-detail-metric"><span>Широта</span><b>${safeText(a.lat||'—')}</b></div><div class="anomaly-detail-metric"><span>Долгота</span><b>${safeText(a.lon||'—')}</b></div><div class="anomaly-detail-metric"><span>Robust Z</span><b>${safeText(a.robust_z||'—')}</b></div><div class="anomaly-detail-metric"><span>Приоритет проверки</span><b>${safeText(a.risk_level||'—')} · ${safeText(a.risk_score||'—')}/10</b></div></div><div class="anomaly-detail-block"><strong>Интерпретация ИИ</strong>${safeText(a.explanation||'Интерпретация отсутствует.')}</div><div class="anomaly-detail-block recommend"><strong>Рекомендация</strong>${safeText(a.recommendation||'Требуется экспертная проверка.')}</div><div class="anomaly-detail-note">Баллы показывают приоритет повторной проверки, а не вероятность наличия опасного объекта. Для вывода необходимы повторный проход, анализ профиля и экспертная оценка.</div></div>`;
+  panel.innerHTML=`<div class="anomaly-detail"><div class="anomaly-detail-head"><div class="anomaly-detail-id">${safeText(a.id||'Аномалия')}</div><span class="anomaly-risk-badge">приоритет ${safeText(a.risk_level||'—')} · ${safeText(a.risk_score||'—')}/10</span></div><div class="sub">Результат автоматизированного анализа</div><div class="anomaly-detail-grid"><div class="anomaly-detail-metric"><span>Широта</span><b>${safeText(a.lat||'—')}</b></div><div class="anomaly-detail-metric"><span>Долгота</span><b>${safeText(a.lon||'—')}</b></div><div class="anomaly-detail-metric"><span>Robust Z</span><b>${safeText(a.robust_z||'—')}</b></div><div class="anomaly-detail-metric"><span>Приоритет проверки</span><b>${safeText(a.risk_level||'—')} · ${safeText(a.risk_score||'—')}/10</b></div></div><div class="anomaly-detail-block"><strong>${a.ai_source==='local'?'Локальное объяснение (AI-интерпретация недоступна)':'Интерпретация ИИ'}</strong>${safeText(a.explanation||'Интерпретация отсутствует.')}</div><div class="anomaly-detail-block recommend"><strong>Рекомендация</strong>${safeText(a.recommendation||'Требуется экспертная проверка.')}</div><div class="anomaly-detail-note">Баллы показывают приоритет повторной проверки, а не вероятность наличия опасного объекта. Для вывода необходимы повторный проход, анализ профиля и экспертная оценка.</div></div>`;
 }
-function prepareNodulStep(){openProjectModal();}
-document.addEventListener('DOMContentLoaded',()=>{try{const p=JSON.parse(localStorage.getItem(TERRA_PROJECT_KEY)||'null');if(p)renderTerraProject(p);}catch(e){}});
+function prepareTerraStep(){openProjectModal();}
+document.addEventListener('DOMContentLoaded',()=>{try{const p=terraLoadProject();if(p)renderTerraProject(p);}catch(e){}});
 
 document.addEventListener('change', function(e){
   if(e.target && e.target.id === 'osmToggle' && terraMapLibre){
@@ -1414,8 +1505,8 @@ document.addEventListener('change', function(e){
   }
   if(e.target && e.target.id === 'anomaliesToggle' && terraMapLibre){
     const visibility=e.target.checked?'visible':'none';
-    if(terraMapLibre.getLayer('nodul-anomalies-layer'))terraMapLibre.setLayoutProperty('nodul-anomalies-layer','visibility',visibility);
-    if(terraMapLibre.getLayer('nodul-anomalies-labels'))terraMapLibre.setLayoutProperty('nodul-anomalies-labels','visibility',visibility);
+    if(terraMapLibre.getLayer('terraintel-anomalies-layer'))terraMapLibre.setLayoutProperty('terraintel-anomalies-layer','visibility',visibility);
+    if(terraMapLibre.getLayer('terraintel-anomalies-labels'))terraMapLibre.setLayoutProperty('terraintel-anomalies-labels','visibility',visibility);
   }
 });
 </script>
