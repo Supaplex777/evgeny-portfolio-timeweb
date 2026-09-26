@@ -1201,27 +1201,29 @@ html.skills-open,body.skills-open{overflow:hidden!important}
     <div class="cert-upload-backdrop" data-close-cert-upload></div>
     <section class="cert-upload-dialog" role="dialog" aria-modal="true" aria-labelledby="cert-upload-title">
       <button class="cert-upload-close" type="button" data-close-cert-upload aria-label="Закрыть">×</button>
-      <div class="cert-upload-icon">＋</div>
-      <h2 id="cert-upload-title">Добавить сертификат</h2>
-      <p>Выберите файл сертификата. Поддерживаются PDF, JPG, JPEG и PNG.</p>
-      <label class="cert-file-zone">
-        <input id="cert-file-input" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" />
-        <span class="cert-file-zone-title">Нажмите, чтобы выбрать файл</span>
-        <span class="cert-file-zone-note">или перетащите файл сюда</span>
-      </label>
-      <div class="cert-file-selected" id="cert-file-selected" hidden></div>
-      <div class="cert-rotate-wrap" id="cert-rotate-wrap" hidden>
-        <div class="cert-rotate-preview"><img id="cert-rotate-image" alt="Предпросмотр сертификата перед загрузкой"></div>
-        <div class="cert-rotate-actions">
-          <button type="button" class="cert-rotate-btn" id="cert-rotate-left">⟲ Повернуть влево</button>
-          <button type="button" class="cert-rotate-btn" id="cert-rotate-right">⟳ Повернуть вправо</button>
+      <div class="cert-upload-scroll">
+        <div class="cert-upload-icon">＋</div>
+        <h2 id="cert-upload-title">Добавить сертификат</h2>
+        <p>Выберите файл сертификата. Поддерживаются PDF, JPG, JPEG и PNG.</p>
+        <label class="cert-file-zone">
+          <input id="cert-file-input" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" />
+          <span class="cert-file-zone-title">Нажмите, чтобы выбрать файл</span>
+          <span class="cert-file-zone-note">или перетащите файл сюда</span>
+        </label>
+        <div class="cert-file-selected" id="cert-file-selected" hidden></div>
+        <div class="cert-rotate-wrap" id="cert-rotate-wrap" hidden>
+          <div class="cert-rotate-preview"><img id="cert-rotate-image" alt="Предпросмотр сертификата перед загрузкой"></div>
+          <div class="cert-rotate-actions">
+            <button type="button" class="cert-rotate-btn" id="cert-rotate-left">⟲ Повернуть влево</button>
+            <button type="button" class="cert-rotate-btn" id="cert-rotate-right">⟳ Повернуть вправо</button>
+          </div>
         </div>
+        <label class="cert-description-field">
+          <span>Описание / чему я научился <small>(необязательно)</small></span>
+          <textarea id="cert-description-input" rows="5" maxlength="1200" placeholder="Например: Изучил работу с Git и GitHub, создание веток, commit/push/pull, слияние изменений и работу с удалёнными репозиториями."></textarea>
+          <small class="cert-description-hint">Коротко опишите, какие знания и практические навыки подтверждает сертификат.</small>
+        </label>
       </div>
-      <label class="cert-description-field">
-        <span>Описание / чему я научился <small>(необязательно)</small></span>
-        <textarea id="cert-description-input" rows="5" maxlength="1200" placeholder="Например: Изучил работу с Git и GitHub, создание веток, commit/push/pull, слияние изменений и работу с удалёнными репозиториями."></textarea>
-        <small class="cert-description-hint">Коротко опишите, какие знания и практические навыки подтверждает сертификат.</small>
-      </label>
       <button class="cert-upload-primary" type="button" id="cert-upload-primary" disabled>Добавить сертификат</button>
     </section>
   </div>
@@ -1407,7 +1409,8 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 .cert-upload-modal{position:fixed;inset:0;z-index:12000;display:none;align-items:center;justify-content:center;padding:24px}
 .cert-upload-modal.is-open{display:flex}
 .cert-upload-backdrop{position:absolute;inset:0;background:rgba(8,14,24,.62);backdrop-filter:blur(10px)}
-.cert-upload-dialog{position:relative;width:min(560px,94vw);padding:34px;border-radius:28px;background:rgba(250,252,255,.985);box-shadow:0 28px 90px rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.8);color:#10233a;text-align:center}
+.cert-upload-dialog{position:relative;display:flex;flex-direction:column;width:min(560px,94vw);max-height:min(88vh,720px);padding:34px;border-radius:28px;background:rgba(250,252,255,.985);box-shadow:0 28px 90px rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.8);color:#10233a;text-align:center}
+.cert-upload-scroll{overflow-y:auto;flex:1 1 auto;min-height:0}
 .cert-upload-close{position:absolute;right:16px;top:12px;width:40px;height:40px;border:0;border-radius:50%;background:#edf3f8;color:#23384e;font-size:28px;line-height:1;cursor:pointer}
 .cert-upload-icon{width:66px;height:66px;margin:4px auto 14px;border-radius:20px;display:grid;place-items:center;font-size:36px;color:#fff;background:linear-gradient(135deg,#1786e6,#0e67bd);box-shadow:0 12px 28px rgba(22,120,211,.25)}
 .cert-upload-dialog h2{font-size:30px;line-height:1.1;margin:0 0 10px}
@@ -1426,7 +1429,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 .cert-rotate-btn:hover{background:#dcefff;transform:translateY(-1px)}
 .cert-rotate-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .cert-description-field{display:block;margin-top:16px;text-align:left}.cert-description-field>span{display:block;margin-bottom:7px;color:#17334d;font-size:14px;font-weight:800}.cert-description-field>span small{font-weight:600;color:#7a8c9d}.cert-description-field textarea{width:100%;resize:vertical;min-height:112px;max-height:220px;padding:13px 14px;border:1px solid #c8d9e7;border-radius:14px;background:#fff;color:#10233a;font:14px/1.5 Arial,Helvetica,sans-serif;outline:none;transition:border-color .18s ease,box-shadow .18s ease}.cert-description-field textarea:focus{border-color:#5ca9e8;box-shadow:0 0 0 3px rgba(22,120,211,.10)}.cert-description-hint{display:block;margin-top:6px;color:#7a8c9d;font-size:12px;line-height:1.4}
-.cert-upload-primary{width:100%;margin-top:18px;padding:14px 18px;border:0;border-radius:16px;background:linear-gradient(135deg,#1678d3,#2095f2);color:white;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 12px 26px rgba(22,120,211,.22)}
+.cert-upload-primary{width:100%;flex:0 0 auto;margin-top:18px;padding:14px 18px;border:0;border-radius:16px;background:linear-gradient(135deg,#1678d3,#2095f2);color:white;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 12px 26px rgba(22,120,211,.22)}
 .cert-upload-primary:disabled{opacity:.42;cursor:not-allowed;box-shadow:none}
 
 /* Certificate details modal — premium dark two-column panel */
