@@ -1210,6 +1210,13 @@ html.skills-open,body.skills-open{overflow:hidden!important}
         <span class="cert-file-zone-note">или перетащите файл сюда</span>
       </label>
       <div class="cert-file-selected" id="cert-file-selected" hidden></div>
+      <div class="cert-rotate-wrap" id="cert-rotate-wrap" hidden>
+        <div class="cert-rotate-preview"><img id="cert-rotate-image" alt="Предпросмотр сертификата перед загрузкой"></div>
+        <div class="cert-rotate-actions">
+          <button type="button" class="cert-rotate-btn" id="cert-rotate-left">⟲ Повернуть влево</button>
+          <button type="button" class="cert-rotate-btn" id="cert-rotate-right">⟳ Повернуть вправо</button>
+        </div>
+      </div>
       <label class="cert-description-field">
         <span>Описание / чему я научился <small>(необязательно)</small></span>
         <textarea id="cert-description-input" rows="5" maxlength="1200" placeholder="Например: Изучил работу с Git и GitHub, создание веток, commit/push/pull, слияние изменений и работу с удалёнными репозиториями."></textarea>
@@ -1235,16 +1242,21 @@ html.skills-open,body.skills-open{overflow:hidden!important}
           <div class="cert-details-section-label">Описание и практические навыки</div>
           <div class="cert-details-view" id="cert-details-view"></div>
           <div class="cert-details-edit" id="cert-details-edit" hidden>
+            <label for="cert-details-title-input">Отображаемое название</label>
+            <input type="text" id="cert-details-title-input" class="cert-editor-title cert-details-title-input" maxlength="200" placeholder="Например: Python для анализа данных">
             <div class="cert-editor-heading">Пройденные темы и практические навыки</div>
             <div class="cert-editor-list" id="cert-editor-list"></div>
             <button class="cert-editor-add" type="button" id="cert-editor-add-button">＋ Добавить пункт</button>
             <div class="cert-details-format-example"><strong>Теперь форматировать вручную не нужно.</strong> Каждый пункт хранится отдельно: название навыка и его краткое описание. Нумерация 01 / 02 / 03 создаётся автоматически.</div>
           </div>
           <div class="cert-details-actions">
-            <button class="cert-details-edit-trigger" type="button" id="cert-details-edit-button" title="Редактировать описание" aria-label="Редактировать описание">✎ <span>Редактировать</span></button>
-            <div class="cert-details-edit-actions" id="cert-details-edit-actions" hidden>
-              <button class="cert-details-cancel" type="button" id="cert-details-cancel-button">Отмена</button>
-              <button class="cert-details-primary" type="button" id="cert-details-save-button">Сохранить</button>
+            <button class="cert-details-delete" type="button" id="cert-details-delete-button" hidden>🗑 Удалить сертификат</button>
+            <div class="cert-details-actions-primary">
+              <button class="cert-details-edit-trigger" type="button" id="cert-details-edit-button" title="Редактировать название и описание" aria-label="Редактировать название и описание">✎ <span>Редактировать</span></button>
+              <div class="cert-details-edit-actions" id="cert-details-edit-actions" hidden>
+                <button class="cert-details-cancel" type="button" id="cert-details-cancel-button">Отмена</button>
+                <button class="cert-details-primary" type="button" id="cert-details-save-button">Сохранить</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1406,6 +1418,13 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 .cert-file-zone-title{font-size:18px;font-weight:700;color:#15314d}
 .cert-file-zone-note{margin-top:6px;font-size:14px;color:#75889b}
 .cert-file-selected{margin-top:14px;padding:12px 14px;border-radius:14px;background:#edf7ff;color:#195e96;font-weight:700;overflow-wrap:anywhere}
+.cert-rotate-wrap{margin-top:14px}
+.cert-rotate-preview{width:100%;max-height:260px;border-radius:14px;background:#0e1620;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(20,40,60,.15)}
+.cert-rotate-preview img{max-width:100%;max-height:260px;object-fit:contain;display:block}
+.cert-rotate-actions{display:flex;gap:10px;margin-top:10px}
+.cert-rotate-btn{flex:1;padding:10px 12px;border:1px solid rgba(20,120,205,.3);border-radius:12px;background:#edf7ff;color:#195e96;font-weight:800;cursor:pointer;transition:.18s ease}
+.cert-rotate-btn:hover{background:#dcefff;transform:translateY(-1px)}
+.cert-rotate-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .cert-description-field{display:block;margin-top:16px;text-align:left}.cert-description-field>span{display:block;margin-bottom:7px;color:#17334d;font-size:14px;font-weight:800}.cert-description-field>span small{font-weight:600;color:#7a8c9d}.cert-description-field textarea{width:100%;resize:vertical;min-height:112px;max-height:220px;padding:13px 14px;border:1px solid #c8d9e7;border-radius:14px;background:#fff;color:#10233a;font:14px/1.5 Arial,Helvetica,sans-serif;outline:none;transition:border-color .18s ease,box-shadow .18s ease}.cert-description-field textarea:focus{border-color:#5ca9e8;box-shadow:0 0 0 3px rgba(22,120,211,.10)}.cert-description-hint{display:block;margin-top:6px;color:#7a8c9d;font-size:12px;line-height:1.4}
 .cert-upload-primary{width:100%;margin-top:18px;padding:14px 18px;border:0;border-radius:16px;background:linear-gradient(135deg,#1678d3,#2095f2);color:white;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 12px 26px rgba(22,120,211,.22)}
 .cert-upload-primary:disabled{opacity:.42;cursor:not-allowed;box-shadow:none}
@@ -1422,8 +1441,9 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 .cert-details-view{margin-top:14px;padding:0;min-height:86px}.cert-details-view.is-empty{padding:17px 18px;border:1px dashed rgba(116,185,233,.25);border-radius:15px;background:rgba(255,255,255,.025);color:#8fa5b8;font-size:14px;line-height:1.65;font-style:italic}
 .cert-skill-list{display:grid;gap:0;margin-top:2px}.cert-skill-row{display:grid;grid-template-columns:46px minmax(0,1fr);gap:14px;padding:16px 0 17px;border-bottom:1px solid rgba(255,255,255,.075)}.cert-skill-row:last-child{border-bottom:0;padding-bottom:4px}.cert-skill-number{padding-top:2px;color:#62c7ff;font-size:15px;line-height:1.2;font-weight:900;letter-spacing:.04em;font-variant-numeric:tabular-nums}.cert-skill-copy{min-width:0}.cert-skill-title{margin:0;color:#f5f9fc;font-size:16px;line-height:1.35;font-weight:800;letter-spacing:-.01em}.cert-skill-description{margin-top:5px;color:#9fb0bf;font-size:14px;line-height:1.62}.cert-details-plain{color:#c9d8e4;font-size:15px;line-height:1.75;white-space:pre-wrap}
 .cert-details-edit{margin-top:14px}.cert-details-edit[hidden],.cert-details-edit-actions[hidden],.cert-details-view[hidden],#cert-details-edit-button[hidden]{display:none!important}.cert-details-edit label{display:block;margin-bottom:9px;font-weight:800;color:#d9ecfa}.cert-details-edit textarea{display:block;width:100%;box-sizing:border-box;resize:vertical;min-height:265px;max-height:440px;padding:16px 17px;border:1px solid rgba(111,184,234,.28);border-radius:16px;background:rgba(4,14,23,.55);color:#f1f8fd;caret-color:#62c4ff;font:14px/1.62 Arial,Helvetica,sans-serif;outline:none;box-shadow:inset 0 1px 9px rgba(0,0,0,.18)}.cert-details-edit textarea::placeholder{color:#60788c}.cert-details-edit textarea:focus{border-color:#5dbdf8;box-shadow:0 0 0 3px rgba(70,171,239,.12),inset 0 1px 9px rgba(0,0,0,.18)}.cert-editor-heading{margin-bottom:12px;font-weight:800;color:#d9ecfa}.cert-editor-list{display:grid;gap:12px}.cert-editor-row{position:relative;display:grid;grid-template-columns:42px minmax(0,1fr) 38px;gap:10px;align-items:start;padding:14px;border:1px solid rgba(111,184,234,.18);border-radius:16px;background:rgba(4,14,23,.36)}.cert-editor-number{padding-top:11px;color:#62c7ff;font-size:14px;font-weight:900;text-align:center;font-variant-numeric:tabular-nums}.cert-editor-fields{display:grid;gap:8px}.cert-editor-title,.cert-editor-description{width:100%;box-sizing:border-box;border:1px solid rgba(111,184,234,.22);border-radius:12px;background:rgba(5,16,26,.72);color:#f3f9fd;outline:none;font:14px/1.5 Arial,Helvetica,sans-serif}.cert-editor-title{padding:11px 12px;font-weight:800}.cert-editor-description{min-height:76px;max-height:180px;padding:11px 12px;resize:vertical}.cert-editor-title:focus,.cert-editor-description:focus{border-color:#5dbdf8;box-shadow:0 0 0 3px rgba(70,171,239,.10)}.cert-editor-remove{width:34px;height:34px;border:1px solid rgba(255,255,255,.10);border-radius:10px;background:rgba(255,255,255,.04);color:#9eb3c4;font-size:18px;cursor:pointer;transition:.18s ease}.cert-editor-remove:hover{background:rgba(255,90,90,.10);border-color:rgba(255,120,120,.20);color:#ffc0c0}.cert-editor-add{margin-top:12px;width:100%;padding:11px 14px;border:1px dashed rgba(98,199,255,.36);border-radius:13px;background:rgba(72,156,214,.06);color:#9ddcff;font-weight:800;cursor:pointer}.cert-editor-add:hover{background:rgba(72,156,214,.12);border-color:rgba(98,199,255,.55)}.cert-details-format-example{margin-top:10px;padding:11px 13px;border-left:2px solid rgba(98,199,255,.7);background:rgba(72,156,214,.06);border-radius:0 10px 10px 0;color:#7f96a9;font-size:11px;line-height:1.55}.cert-details-format-example strong{color:#a9c6db}
-.cert-details-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:24px}.cert-details-edit-trigger,.cert-details-cancel,.cert-details-primary{border-radius:12px;padding:10px 15px;font-weight:800;cursor:pointer;transition:.18s ease}.cert-details-edit-trigger{border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.055);color:#cfe3f2}.cert-details-edit-trigger:hover{background:rgba(255,255,255,.1);transform:translateY(-1px)}.cert-details-edit-trigger span{margin-left:4px}.cert-details-edit-actions{display:flex;gap:9px}.cert-details-cancel{border:1px solid rgba(255,255,255,.11);background:transparent;color:#9eb3c4}.cert-details-cancel:hover{background:rgba(255,255,255,.06);color:#e2edf5}.cert-details-primary{border:0;background:linear-gradient(135deg,#1682df,#23a3ff);color:#fff;box-shadow:0 9px 22px rgba(22,120,211,.25)}.cert-details-primary:hover{transform:translateY(-1px);box-shadow:0 13px 28px rgba(22,120,211,.33)}
-@media(max-width:720px){.cert-details-modal{padding:14px}.cert-details-dialog{border-radius:22px}.cert-details-layout{grid-template-columns:1fr}.cert-details-visual{padding:24px 22px 18px;border-right:0;border-bottom:1px solid rgba(255,255,255,.08)}.cert-details-preview{max-width:430px;margin:auto}.cert-details-content{padding:28px 22px 24px}.cert-details-close{right:12px;top:12px}.cert-details-actions{align-items:stretch}.cert-details-edit-trigger,.cert-details-edit-actions{width:100%}.cert-details-edit-actions button{flex:1}}
+.cert-details-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:24px}.cert-details-actions-primary{display:flex;align-items:center;gap:10px}.cert-details-edit-trigger,.cert-details-cancel,.cert-details-primary,.cert-details-delete{border-radius:12px;padding:10px 15px;font-weight:800;cursor:pointer;transition:.18s ease}.cert-details-edit-trigger{border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.055);color:#cfe3f2}.cert-details-edit-trigger:hover{background:rgba(255,255,255,.1);transform:translateY(-1px)}.cert-details-edit-trigger span{margin-left:4px}.cert-details-edit-actions{display:flex;gap:9px}.cert-details-cancel{border:1px solid rgba(255,255,255,.11);background:transparent;color:#9eb3c4}.cert-details-cancel:hover{background:rgba(255,255,255,.06);color:#e2edf5}.cert-details-primary{border:0;background:linear-gradient(135deg,#1682df,#23a3ff);color:#fff;box-shadow:0 9px 22px rgba(22,120,211,.25)}.cert-details-primary:hover{transform:translateY(-1px);box-shadow:0 13px 28px rgba(22,120,211,.33)}.cert-details-delete{border:1px solid rgba(255,105,105,.35);background:rgba(255,80,80,.1);color:#ffb4b4}.cert-details-delete:hover{background:rgba(255,80,80,.18);transform:translateY(-1px)}.cert-details-delete[hidden]{display:none!important}
+.cert-details-title-input{margin-bottom:14px}
+@media(max-width:720px){.cert-details-modal{padding:14px}.cert-details-dialog{border-radius:22px}.cert-details-layout{grid-template-columns:1fr}.cert-details-visual{padding:24px 22px 18px;border-right:0;border-bottom:1px solid rgba(255,255,255,.08)}.cert-details-preview{max-width:430px;margin:auto}.cert-details-content{padding:28px 22px 24px}.cert-details-close{right:12px;top:12px}.cert-details-actions{align-items:stretch;flex-direction:column}.cert-details-actions-primary{width:100%}.cert-details-delete{width:100%}.cert-details-edit-trigger,.cert-details-edit-actions{width:100%}.cert-details-edit-actions button{flex:1}}
 
 /* Mobile */
 .mobile-upload-trigger{margin-top:18px;border:0;border-radius:14px;padding:13px 18px;background:#1678d3;color:#fff;font-weight:800;cursor:pointer}
@@ -1456,6 +1476,8 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 </style>
 <!-- v57 cloud documents: certificates backend at /api/certificates (Timeweb S3). Supabase SDK stays loaded for the Projects section below. Existing visual/animation code is untouched. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Pure rotation math for the certificate upload preview, served same-origin (no CDN, works without VPN). -->
+<script src="/certificates-rotate.js"></script>
 <script>
 (function(){
   const categories={
@@ -1488,9 +1510,11 @@ html.skills-open,body.skills-open{overflow:hidden!important}
   const detailsMeta=document.getElementById('cert-details-meta');
   const detailsView=document.getElementById('cert-details-view');
   const detailsEdit=document.getElementById('cert-details-edit');
+  const detailsTitleInput=document.getElementById('cert-details-title-input');
   const detailsEditorList=document.getElementById('cert-editor-list');
   const detailsEditorAddButton=document.getElementById('cert-editor-add-button');
   const detailsEditButton=document.getElementById('cert-details-edit-button');
+  const detailsDeleteButton=document.getElementById('cert-details-delete-button');
   const detailsSaveButton=document.getElementById('cert-details-save-button');
   const detailsCancelButton=document.getElementById('cert-details-cancel-button');
   const detailsEditActions=document.getElementById('cert-details-edit-actions');
@@ -1499,6 +1523,10 @@ html.skills-open,body.skills-open{overflow:hidden!important}
   let detailsPreviewUrl=null;
   let detailsItem=null;
   const uploadInline=document.getElementById('cert-upload-inline');
+  const rotateWrap=document.getElementById('cert-rotate-wrap');
+  const rotateImage=document.getElementById('cert-rotate-image');
+  const rotateLeftBtn=document.getElementById('cert-rotate-left');
+  const rotateRightBtn=document.getElementById('cert-rotate-right');
   if(workspace)workspace.classList.add('is-idle');
   if(content)content.hidden=true;
   if(mobilePanel)mobilePanel.hidden=true;
@@ -1529,6 +1557,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
       id:row.id,
       category:row.category,
       name:row.name,
+      title:row.title||'',
       type:row.type||'',
       created:new Date(row.created_at).getTime(),
       description:row.description||'',
@@ -1582,9 +1611,10 @@ html.skills-open,body.skills-open{overflow:hidden!important}
       return;
     }
 
-    /* Existing document update: description and/or generated preview. */
+    /* Existing document update: title, description and/or generated preview. */
     const form=new FormData();
     form.append('category',rec.category);
+    form.append('title',rec.title||'');
     form.append('description',rec.description||'');
     if(rec.previewBlob && !rec.previewPath){
       form.append('preview',rec.previewBlob,String(rec.id)+'.webp');
@@ -1592,10 +1622,12 @@ html.skills-open,body.skills-open{overflow:hidden!important}
     const updated=await apiJson(await fetch('/api/certificates/'+encodeURIComponent(String(rec.id)),{
       method:'PATCH',credentials:'same-origin',body:form
     }));
+    rec.title=updated.title||'';
     if(updated.previewUrl){
       rec.previewPath=updated.previewUrl;
       rec.previewUrl=updated.previewUrl;
     }
+    return updated;
   }
   async function deleteCert(id){
     if(!CLOUD_ENABLED)return localDeleteCert(id);
@@ -1630,9 +1662,14 @@ html.skills-open,body.skills-open{overflow:hidden!important}
     if(uploadInline)uploadInline.hidden=true;
     document.querySelectorAll('.js-open-cert-upload').forEach(el=>el.hidden=true);
     if(detailsEditButton)detailsEditButton.hidden=true;
+    if(detailsDeleteButton)detailsDeleteButton.hidden=true;
   }
 
   function esc(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+  /* title is the owner-editable display label; name stays the technical,
+     filename-derived label. Legacy records saved before title existed fall
+     back to name here, so old certificates keep showing exactly as before. */
+  function certDisplayTitle(item){return (item&&item.title&&item.title.trim())||(item&&item.name)||'Сертификат'}
 
   /* Fast certificate previews v24
      The original file stays in IndexedDB. A lightweight WebP thumbnail is
@@ -1849,14 +1886,29 @@ html.skills-open,body.skills-open{overflow:hidden!important}
     detailsView.hidden=false;detailsEdit.hidden=true;detailsEditActions.hidden=true;
     detailsEditButton.hidden=!!(CLOUD_ENABLED&&!ADMIN_MODE);
     detailsEditButton.querySelector('span').textContent=text?'Редактировать':'Добавить описание';
+    if(detailsDeleteButton)detailsDeleteButton.hidden=!!(CLOUD_ENABLED&&!ADMIN_MODE);
   }
   function openDetails(item){
     detailsItem=item;
-    detailsTitle.textContent=(item.name||'Сертификат').replace(/\.pdf$/i,'');
+    detailsTitle.textContent=certDisplayTitle(item).replace(/\.pdf$/i,'');
     detailsMeta.textContent=(categories[item.category]||'Сертификаты')+' · '+new Date(item.created).toLocaleDateString('ru-RU');
     renderDetailsPreview(item);showDetailsReadMode();
     detailsModal.classList.add('is-open');detailsModal.setAttribute('aria-hidden','false');
     document.body.style.overflow='hidden';
+  }
+  async function deleteDetailsCertificate(){
+    if(!detailsItem)return;
+    if(CLOUD_ENABLED&&!ADMIN_MODE)return;
+    if(!confirm('Удалить этот сертификат?'))return;
+    const id=detailsItem.id;
+    try{
+      await deleteCert(id);
+      closeDetails();
+      await render();
+    }catch(error){
+      console.error(error);
+      alert('Не удалось удалить сертификат. Проверьте вход владельца.');
+    }
   }
   function closeDetails(){
     detailsModal.classList.remove('is-open');detailsModal.setAttribute('aria-hidden','true');detailsItem=null;document.body.style.overflow='';
@@ -1875,6 +1927,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
   function renumberEditorRows(){[...detailsEditorList.children].forEach((row,i)=>{const n=row.querySelector('.cert-editor-number');if(n)n.textContent=String(i+1).padStart(2,'0')})}
   function addEditorRow(data){const row=makeEditorRow(data);detailsEditorList.appendChild(row);renumberEditorRows();return row}
   function populateDetailsEditor(){
+    if(detailsTitleInput)detailsTitleInput.value=certDisplayTitle(detailsItem);
     detailsEditorList.innerHTML='';
     const items=parseCourseDescription(detailsItem&&detailsItem.description||'');
     if(items.length)items.forEach(addEditorRow);else addEditorRow();
@@ -1893,15 +1946,17 @@ html.skills-open,body.skills-open{overflow:hidden!important}
     if(CLOUD_ENABLED){try{await requireOwner()}catch(error){console.warn(error);return}}
     populateDetailsEditor();
     detailsView.hidden=true;detailsEdit.hidden=false;detailsEditButton.hidden=true;detailsEditActions.hidden=false;
-    requestAnimationFrame(()=>{const first=detailsEditorList.querySelector('.cert-editor-title');if(first)first.focus()});
+    requestAnimationFrame(()=>{if(detailsTitleInput)detailsTitleInput.focus()});
   }
   function cancelDetailsEdit(){if(!detailsItem)return;showDetailsReadMode()}
   async function saveDetails(){
     if(!detailsItem)return;
+    const newTitle=detailsTitleInput?detailsTitleInput.value.trim():'';
     const newDescription=collectDetailsEditor();
-    const updated={...detailsItem,description:newDescription};
+    const updated={...detailsItem,title:newTitle,description:newDescription};
     await putCert(updated);
     detailsItem=updated;
+    detailsTitle.textContent=certDisplayTitle(updated).replace(/\.pdf$/i,'');
     showDetailsReadMode();
     await render();
   }
@@ -1932,7 +1987,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
       thumb.textContent='ФАЙЛ';
     }
     const info=document.createElement('div');
-    info.innerHTML='<div class="cert-item-title">'+esc(item.name)+'</div><div class="cert-item-meta">'+new Date(item.created).toLocaleDateString('ru-RU')+'</div>';
+    info.innerHTML='<div class="cert-item-title">'+esc(certDisplayTitle(item))+'</div><div class="cert-item-meta">'+new Date(item.created).toLocaleDateString('ru-RU')+'</div>';
     const actions=document.createElement('div');actions.className='cert-item-actions';
     const open=document.createElement('button');open.type='button';open.textContent='Открыть';open.addEventListener('click',()=>{
       if(item.fileUrl){window.open(item.fileUrl,'_blank','noopener');return}
@@ -2078,6 +2133,71 @@ html.skills-open,body.skills-open{overflow:hidden!important}
       });
     });
   }
+  /* Rotate-before-upload (JPG/PNG/WebP only, PDF is never rotated). The
+     rotated canvas output becomes the actual uploaded file and feeds the
+     thumbnail generator below — not a CSS transform on the preview alone. */
+  let rotationBitmap=null;
+  let rotationDeg=0;
+  let rotationUploadBlob=null;
+  let rotationPreviewUrl=null;
+  function isRotatableImage(file){return !!file && /^image\/(png|jpeg|jpg|webp)$/i.test(file.type||'')}
+  function cleanupRotationBitmap(){
+    if(rotationBitmap&&rotationBitmap.close)rotationBitmap.close();
+    rotationBitmap=null;
+    if(rotationPreviewUrl){URL.revokeObjectURL(rotationPreviewUrl);rotationPreviewUrl=null}
+  }
+  function hideRotateUI(){
+    if(rotateWrap)rotateWrap.hidden=true;
+    cleanupRotationBitmap();
+    rotationDeg=0;rotationUploadBlob=null;
+  }
+  function drawRotatedPreview(){
+    return new Promise(resolve=>{
+      if(!rotationBitmap||!pendingFile){resolve();return}
+      const swapped=CertRotate.isSwapped(rotationDeg);
+      const w=rotationBitmap.width,h=rotationBitmap.height;
+      const canvas=document.createElement('canvas');
+      canvas.width=swapped?h:w;canvas.height=swapped?w:h;
+      const ctx=canvas.getContext('2d');
+      if(pendingFile.type==='image/jpeg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height)}
+      ctx.save();
+      ctx.translate(canvas.width/2,canvas.height/2);
+      ctx.rotate(rotationDeg*Math.PI/180);
+      ctx.drawImage(rotationBitmap,-w/2,-h/2,w,h);
+      ctx.restore();
+      const quality=pendingFile.type==='image/png'?undefined:0.92;
+      canvas.toBlob(blob=>{
+        if(!blob){resolve();return}
+        rotationUploadBlob=rotationDeg===0?null:blob; // 0°: keep the original bytes, skip a needless re-encode
+        if(rotationPreviewUrl)URL.revokeObjectURL(rotationPreviewUrl);
+        rotationPreviewUrl=URL.createObjectURL(blob);
+        if(rotateImage)rotateImage.src=rotationPreviewUrl;
+        resolve();
+      },pendingFile.type||'image/png',quality);
+    });
+  }
+  async function prepareRotationPreview(file){
+    hideRotateUI();
+    if(!isRotatableImage(file)){if(rotateWrap)rotateWrap.hidden=true;return}
+    try{rotationBitmap=await createImageBitmap(file)}catch(error){console.warn('Не удалось подготовить превью для поворота:',error);return}
+    rotationDeg=0;
+    await drawRotatedPreview();
+    if(rotateWrap)rotateWrap.hidden=false;
+  }
+  async function rotateBy(delta){
+    if(!rotationBitmap)return;
+    if(rotateLeftBtn)rotateLeftBtn.disabled=true;
+    if(rotateRightBtn)rotateRightBtn.disabled=true;
+    primary.disabled=true;
+    rotationDeg=CertRotate.normalizeRotation(rotationDeg+delta);
+    await drawRotatedPreview();
+    if(rotateLeftBtn)rotateLeftBtn.disabled=false;
+    if(rotateRightBtn)rotateRightBtn.disabled=false;
+    primary.disabled=!pendingFile;
+  }
+  if(rotateLeftBtn)rotateLeftBtn.addEventListener('click',()=>rotateBy(-90));
+  if(rotateRightBtn)rotateRightBtn.addEventListener('click',()=>rotateBy(90));
+
   async function openModal(){
     if(!activeCategory)return;
     if(CLOUD_ENABLED){
@@ -2086,9 +2206,10 @@ html.skills-open,body.skills-open{overflow:hidden!important}
     }
     modal.classList.add('is-open');modal.setAttribute('aria-hidden','false');
     pendingFile=null;input.value='';selected.hidden=true;selected.textContent='';if(descriptionInput)descriptionInput.value='';primary.disabled=true;primary.textContent='Добавить сертификат';
+    hideRotateUI();
     document.body.style.overflow='hidden';setTimeout(()=>input.focus(),40)
   }
-  function closeModal(){modal.classList.remove('is-open');modal.setAttribute('aria-hidden','true');document.body.style.overflow=''}
+  function closeModal(){modal.classList.remove('is-open');modal.setAttribute('aria-hidden','true');document.body.style.overflow='';hideRotateUI()}
 
   document.querySelectorAll('.cert-category-hit').forEach(btn=>btn.addEventListener('click',event=>{animateCategorySelection(btn,event);selectCategory(btn.dataset.certCategory)}));
   document.querySelectorAll('.mobile-cert-category').forEach(btn=>btn.addEventListener('click',event=>{animateCategorySelection(btn,event);selectCategory(btn.dataset.certCategory)}));
@@ -2114,27 +2235,34 @@ html.skills-open,body.skills-open{overflow:hidden!important}
     if(detailsEditorAddButton)detailsEditorAddButton.addEventListener('click',()=>{const row=addEditorRow();requestAnimationFrame(()=>row.querySelector('.cert-editor-title')?.focus())});
     detailsCancelButton.addEventListener('click',cancelDetailsEdit);
     detailsOpenButton.addEventListener('click',openDetailsOriginal);
-    detailsSaveButton.addEventListener('click',()=>saveDetails().catch(error=>{console.error(error);alert('Не удалось сохранить описание. Попробуйте ещё раз.')}));
+    detailsSaveButton.addEventListener('click',()=>saveDetails().catch(error=>{console.error(error);alert(error?.message||'Не удалось сохранить название и описание. Попробуйте ещё раз.')}));
+    if(detailsDeleteButton)detailsDeleteButton.addEventListener('click',deleteDetailsCertificate);
   }
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(modal.classList.contains('is-open'))closeModal();else if(detailsModal&&detailsModal.classList.contains('is-open'))closeDetails()}});
-  input.addEventListener('change',()=>{pendingFile=input.files&&input.files[0];if(!pendingFile){selected.hidden=true;primary.disabled=true;return}selected.textContent='Выбран файл: '+pendingFile.name;selected.hidden=false;primary.disabled=false});
+  input.addEventListener('change',()=>{
+    pendingFile=input.files&&input.files[0];
+    if(!pendingFile){selected.hidden=true;primary.disabled=true;hideRotateUI();return}
+    selected.textContent='Выбран файл: '+pendingFile.name;selected.hidden=false;primary.disabled=false;
+    prepareRotationPreview(pendingFile).catch(error=>console.warn('Не удалось подготовить поворот:',error));
+  });
   primary.addEventListener('click',async()=>{
     if(!pendingFile)return;
     primary.disabled=true;
     primary.textContent='Создаю быстрое превью…';
     try{
+      const uploadBlob=rotationUploadBlob||pendingFile;
       let previewBlob=null;
       let previewError=null;
-      try{previewBlob=await makePreview(pendingFile,pendingFile.type||'',pendingFile.name)}catch(error){previewError=error;console.warn('Не удалось создать превью при загрузке:',error)}
+      try{previewBlob=await makePreview(uploadBlob,uploadBlob.type||pendingFile.type||'',pendingFile.name)}catch(error){previewError=error;console.warn('Не удалось создать превью при загрузке:',error)}
       primary.textContent='Сохраняю…';
       await putCert({
         id:crypto.randomUUID?crypto.randomUUID():(Date.now()+'-'+Math.random()),
         category:activeCategory,
         name:pendingFile.name,
-        type:pendingFile.type||'',
+        type:uploadBlob.type||pendingFile.type||'',
         created:Date.now(),
         description:descriptionInput?descriptionInput.value.trim():'',
-        blob:pendingFile,
+        blob:uploadBlob,
         previewBlob:previewBlob||null,
         previewType:previewBlob?'image/webp':'',
         previewVersion:previewBlob?1:0

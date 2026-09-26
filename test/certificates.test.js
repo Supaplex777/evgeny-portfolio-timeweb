@@ -181,6 +181,40 @@ async function login() {
   return setCookie.split(';')[0];
 }
 
+// A second app instance on the same fake S3 bucket, used only by the
+// title/delete test group below: it needs several of its own login() calls,
+// and the loginLimiter (10/15min) is already close to used up by the tests
+// above. A fresh createCertificatesRouter() call gets its own independent
+// rate-limiter store, so this doesn't touch the shared login budget at all.
+let server2, base2;
+before(async () => {
+  const app2 = express();
+  app2.use(express.json({ limit: '256kb' }));
+  app2.use('/api/certificates', createCertificatesRouter({ s3: fakeS3 }));
+  await new Promise((resolve) => { server2 = app2.listen(0, '127.0.0.1', resolve); });
+  base2 = `http://127.0.0.1:${server2.address().port}`;
+});
+after(() => { server2.close(); });
+
+function request2(pathname, { method = 'GET', origin = ORIGIN, cookie, body, headers = {} } = {}) {
+  const finalHeaders = { ...headers };
+  if (origin) finalHeaders.Origin = origin;
+  if (cookie) finalHeaders.Cookie = cookie;
+  return fetch(`${base2}${pathname}`, { method, headers: finalHeaders, body });
+}
+
+async function login2() {
+  const response = await request2('/api/certificates/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'correct-password' })
+  });
+  assert.equal(response.status, 200);
+  const setCookie = response.headers.get('set-cookie');
+  assert.ok(setCookie, 'login must set a session cookie');
+  return setCookie.split(';')[0];
+}
+
 test('GET /counts returns zero counts for every category when the bucket is empty', async () => {
   const response = await request('/api/certificates/counts', { origin: null });
   assert.equal(response.status, 200);
@@ -318,7 +352,7 @@ test('upload with a preview file stores it and returns a ready-made previewUrl (
   const row = await response.json();
   // Exactly the shape normalizeCloudRow()/render()/buildCertCard() on the
   // client expect — no leaking of internal S3 keys, just ready-made URLs.
-  assert.deepEqual(Object.keys(row).sort(), ['category', 'created_at', 'description', 'fileUrl', 'id', 'name', 'previewUrl', 'type']);
+  assert.deepEqual(Object.keys(row).sort(), ['category', 'created_at', 'description', 'fileUrl', 'id', 'name', 'previewUrl', 'title', 'type']);
   assert.equal(row.previewUrl, 'https://cdn.example.test/previews/ai/3fa85f64-5717-4562-b3fc-2c963f66afb0.webp');
   assert.equal(row.fileUrl.startsWith('https://cdn.example.test/originals/ai/3fa85f64-5717-4562-b3fc-2c963f66afb0/'), true);
 
@@ -373,4 +407,141 @@ test('getCertificatesSummaryForAI aggregates all categories for the AI prompt co
   assert.equal(summary.length, 1);
   assert.equal(summary[0].category, 'code');
   assert.equal(summary[0].description, 'Описание для AI');
+});
+
+// --- title editing, deletion and backward compatibility ---------------------
+
+test('PATCH updates title independently of description', async () => {
+  const cookie = await login2();
+  const form = new FormData();
+  form.append('id', '3fa85f64-5717-4562-b3fc-2c963f66afb1');
+  form.append('category', 'ai');
+  form.append('name', 'raw-scan-2024.pdf');
+  form.append('description', 'Первое описание');
+  form.append('file', new Blob([Buffer.from('%PDF-1.4 fake')], { type: 'application/pdf' }), 'raw-scan-2024.pdf');
+  const uploaded = await (await request2('/api/certificates', { method: 'POST', cookie, body: form })).json();
+  assert.equal(uploaded.title, '', 'a freshly uploaded certificate has no title yet');
+  assert.equal(uploaded.name, 'raw-scan-2024.pdf');
+
+  const titleForm = new FormData();
+  titleForm.append('category', 'ai');
+  titleForm.append('title', 'Python для анализа данных');
+  const patched = await (await request2(`/api/certificates/${uploaded.id}`, { method: 'PATCH', cookie, body: titleForm })).json();
+  assert.equal(patched.title, 'Python для анализа данных');
+  assert.equal(patched.name, 'raw-scan-2024.pdf', 'the technical name/filename must stay untouched');
+  assert.equal(patched.description, 'Первое описание', 'description is preserved when only title is patched');
+
+  const listed = await (await request2('/api/certificates?category=ai', { origin: null })).json();
+  assert.equal(listed.find((c) => c.id === uploaded.id).title, 'Python для анализа данных');
+});
+
+test('PATCH updates description independently of title', async () => {
+  const cookie = await login2();
+  const form = new FormData();
+  form.append('id', '3fa85f64-5717-4562-b3fc-2c963f66afb2');
+  form.append('category', 'ai');
+  form.append('name', 'cert.pdf');
+  form.append('description', 'Старое описание');
+  form.append('file', new Blob([Buffer.from('%PDF-1.4 fake')], { type: 'application/pdf' }), 'cert.pdf');
+  const uploaded = await (await request2('/api/certificates', { method: 'POST', cookie, body: form })).json();
+
+  const titleForm = new FormData();
+  titleForm.append('category', 'ai');
+  titleForm.append('title', 'Красивое название');
+  await request2(`/api/certificates/${uploaded.id}`, { method: 'PATCH', cookie, body: titleForm });
+
+  const descForm = new FormData();
+  descForm.append('category', 'ai');
+  descForm.append('description', 'Новое описание');
+  const patched = await (await request2(`/api/certificates/${uploaded.id}`, { method: 'PATCH', cookie, body: descForm })).json();
+  assert.equal(patched.description, 'Новое описание');
+  assert.equal(patched.title, 'Красивое название', 'title is preserved when only description is patched');
+});
+
+test('PATCH rejects a title or description longer than the server limit', async () => {
+  const cookie = await login2();
+  const form = new FormData();
+  form.append('id', '3fa85f64-5717-4562-b3fc-2c963f66afb3');
+  form.append('category', 'ai');
+  form.append('name', 'cert.pdf');
+  form.append('description', '');
+  form.append('file', new Blob([Buffer.from('%PDF-1.4 fake')], { type: 'application/pdf' }), 'cert.pdf');
+  const uploaded = await (await request2('/api/certificates', { method: 'POST', cookie, body: form })).json();
+
+  const longTitleForm = new FormData();
+  longTitleForm.append('category', 'ai');
+  longTitleForm.append('title', 'x'.repeat(certificates.MAX_TITLE_LENGTH + 1));
+  const titleResponse = await request2(`/api/certificates/${uploaded.id}`, { method: 'PATCH', cookie, body: longTitleForm });
+  assert.equal(titleResponse.status, 400);
+
+  const longDescriptionForm = new FormData();
+  longDescriptionForm.append('category', 'ai');
+  longDescriptionForm.append('description', 'x'.repeat(certificates.MAX_DESCRIPTION_LENGTH + 1));
+  const descriptionResponse = await request2(`/api/certificates/${uploaded.id}`, { method: 'PATCH', cookie, body: longDescriptionForm });
+  assert.equal(descriptionResponse.status, 400);
+
+  // Neither rejected patch should have modified the stored record.
+  const unchanged = await (await request2('/api/certificates?category=ai', { origin: null })).json();
+  assert.equal(unchanged.find((c) => c.id === uploaded.id).title, '');
+});
+
+test('a legacy record saved before the title field existed falls back to name (backward compatibility)', async () => {
+  // Simulate metadata written by the pre-title version of the backend: no
+  // `title` key at all, exactly like every certificate migrated from Supabase.
+  const legacyId = '1699999999999-0.42';
+  await certificates.putMetadata(fakeS3, 'test-bucket', 'ai', legacyId, {
+    id: legacyId,
+    category: 'ai',
+    name: 'Старый сертификат.pdf',
+    type: 'application/pdf',
+    created_at: '2023-01-01T00:00:00.000Z',
+    description: 'Старое описание',
+    file_path: `originals/ai/${legacyId}/cert.pdf`,
+    preview_path: null
+  });
+
+  const listed = await (await request2('/api/certificates?category=ai', { origin: null })).json();
+  const legacy = listed.find((c) => c.id === legacyId);
+  assert.ok(legacy, 'legacy record without a title must still be listed');
+  assert.equal(legacy.title, '', 'toApiRow never invents a title for a legacy record');
+  assert.equal(legacy.name, 'Старый сертификат.pdf');
+
+  // The AI context also falls back to name when no title was ever set.
+  const summary = await certificates.getCertificatesSummaryForAI({ s3: fakeS3 });
+  assert.ok(summary.some((c) => c.name === 'Старый сертификат.pdf'));
+
+  // A description-only patch on that legacy record must not fail or invent a title.
+  const cookie = await login2();
+  const form = new FormData();
+  form.append('category', 'ai');
+  form.append('description', 'Обновлено');
+  const patched = await (await request2(`/api/certificates/${legacyId}`, { method: 'PATCH', cookie, body: form })).json();
+  assert.equal(patched.title, '');
+  assert.equal(patched.description, 'Обновлено');
+});
+
+test('deleting a certificate removes its original, preview and metadata objects from S3', async () => {
+  const cookie = await login2();
+  const form = new FormData();
+  form.append('id', '3fa85f64-5717-4562-b3fc-2c963f66afb4');
+  form.append('category', 'ai');
+  form.append('name', 'full-cert.pdf');
+  form.append('description', 'desc');
+  form.append('file', new Blob([Buffer.from('%PDF-1.4 fake')], { type: 'application/pdf' }), 'full-cert.pdf');
+  form.append('preview', new Blob([Buffer.from('fake-webp-bytes')], { type: 'image/webp' }), 'preview.webp');
+  const uploaded = await (await request2('/api/certificates', { method: 'POST', cookie, body: form })).json();
+
+  const originalKey = certificates.originalKey('ai', uploaded.id, certificates.safeFileName('full-cert.pdf'));
+  const previewKey = certificates.previewKey('ai', uploaded.id);
+  const metadataKey = certificates.metadataKey('ai', uploaded.id);
+  assert.ok(fakeS3.objects.has(originalKey), 'precondition: original was stored');
+  assert.ok(fakeS3.objects.has(previewKey), 'precondition: preview was stored');
+  assert.ok(fakeS3.objects.has(metadataKey), 'precondition: metadata was stored');
+
+  const deleteResponse = await request2(`/api/certificates/${uploaded.id}`, { method: 'DELETE', cookie });
+  assert.equal(deleteResponse.status, 200);
+
+  assert.equal(fakeS3.objects.has(originalKey), false, 'original must be deleted');
+  assert.equal(fakeS3.objects.has(previewKey), false, 'preview must be deleted');
+  assert.equal(fakeS3.objects.has(metadataKey), false, 'metadata must be deleted');
 });
