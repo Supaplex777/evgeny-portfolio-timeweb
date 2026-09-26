@@ -3,7 +3,7 @@ const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
 const path = require('path');
 const { createTerraIntelRouter, terraIntelPageHeaders } = require('./lib/terraintel');
-const { createCertificatesRouter, getCertificatesSummaryForAI } = require('./lib/certificates');
+const { createCertificatesRouter, getCertificatesSummaryForAI, buildCertificatesContext } = require('./lib/certificates');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -171,18 +171,10 @@ app.post('/api/ai', aiRateLimiter, async (req, res) => {
 
     let certificatesContext = '';
     try {
-      const certs = await getCertificatesSummaryForAI();
-      if (Array.isArray(certs) && certs.length) {
-        certificatesContext =
-          '\n\nСЕРТИФИКАТЫ ИЗ ОБЛАЧНОЙ БАЗЫ:\n' +
-          certs.map((c, i) => {
-            const desc = String(c.description || '').trim();
-            const date = c.created_at ? String(c.created_at).slice(0, 10) : '';
-            return `${i + 1}. ${c.name} | категория: ${c.category}${date ? ' | дата: ' + date : ''}${desc ? ' | описание: ' + desc : ''}`;
-          }).join('\n');
-      }
+      certificatesContext = buildCertificatesContext(await getCertificatesSummaryForAI());
     } catch (e) {
-      // If certificate storage is unavailable, AI can still answer from page context.
+      // If certificate storage is unavailable (or the bucket is simply empty),
+      // AI can still answer from page context alone.
     }
 
     const system = [

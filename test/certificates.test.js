@@ -26,7 +26,7 @@ const certificates = require('../lib/certificates');
 const {
   isValidId, isValidCategory, safeFileName, signSession, verifySession,
   parseCookies, serializeCookie, allowedOrigins, publicUrlFor, toApiRow,
-  createCertificatesRouter
+  buildCertificatesContext, createCertificatesRouter
 } = certificates;
 
 // --- Pure helpers ---------------------------------------------------------
@@ -95,6 +95,22 @@ test('publicUrlFor and toApiRow never leak the raw S3 base URL config, only read
   assert.equal(row.previewUrl, 'https://cdn.example.test/previews/ai/1.webp');
   assert.equal('file_path' in row, false);
   assert.equal('preview_path' in row, false);
+});
+
+test('buildCertificatesContext returns an empty string for zero certificates (fresh/empty bucket)', () => {
+  assert.equal(buildCertificatesContext([]), '');
+  assert.equal(buildCertificatesContext(null), '');
+  assert.equal(buildCertificatesContext(undefined), '');
+});
+
+test('buildCertificatesContext formats a non-empty list for the AI prompt', () => {
+  const context = buildCertificatesContext([
+    { name: 'Cert A', category: 'ai', description: 'desc A', created_at: '2024-01-02T00:00:00.000Z' },
+    { name: 'Cert B', category: 'code', description: '', created_at: '2024-01-01T00:00:00.000Z' }
+  ]);
+  assert.match(context, /^\n\nСЕРТИФИКАТЫ ИЗ ОБЛАЧНОЙ БАЗЫ:\n/);
+  assert.match(context, /1\. Cert A \| категория: ai \| дата: 2024-01-02 \| описание: desc A/);
+  assert.match(context, /2\. Cert B \| категория: code \| дата: 2024-01-01$/);
 });
 
 // --- In-memory fake S3 for router-level tests -----------------------------
@@ -172,6 +188,40 @@ test('GET /counts returns zero counts for every category when the bucket is empt
   assert.deepEqual(counts, { ai: 0, code: 0, data: 0, test: 0, basic: 0, new: 0 });
 });
 
+test('GET /api/certificates?category=X returns an empty array (not an error) for every category on a fresh bucket', async () => {
+  for (const category of certificates.CATEGORIES) {
+    const response = await request(`/api/certificates?category=${category}`, { origin: null });
+    assert.equal(response.status, 200, `category ${category} should be 200`);
+    assert.deepEqual(await response.json(), []);
+  }
+});
+
+test('getCertificatesSummaryForAI returns an empty array (never throws) when the bucket has no certificates at all', async () => {
+  const summary = await certificates.getCertificatesSummaryForAI({ s3: fakeS3 });
+  assert.deepEqual(summary, []);
+  assert.equal(buildCertificatesContext(summary), '');
+});
+
+test('PATCH on a well-formed but non-existent id returns 404, not 500, on an empty bucket', async () => {
+  const cookie = await login();
+  const form = new FormData();
+  form.append('description', 'x');
+  const response = await request('/api/certificates/00000000-0000-4000-8000-000000000000', { method: 'PATCH', cookie, body: form });
+  assert.equal(response.status, 404);
+});
+
+test('DELETE on a well-formed but non-existent id returns 404, not 500, on an empty bucket', async () => {
+  const cookie = await login();
+  const response = await request('/api/certificates/00000000-0000-4000-8000-000000000000', { method: 'DELETE', cookie });
+  assert.equal(response.status, 404);
+});
+
+test('a malformed id is rejected with 400 before any S3 lookup is attempted', async () => {
+  const cookie = await login();
+  const response = await request('/api/certificates/does-not-exist-id', { method: 'DELETE', cookie });
+  assert.equal(response.status, 400);
+});
+
 test('POST /api/certificates without Origin/Referer is rejected before touching S3', async () => {
   const response = await request('/api/certificates', { method: 'POST', origin: null });
   assert.equal(response.status, 403);
@@ -237,6 +287,43 @@ test('full owner flow: upload -> list -> counts -> patch -> delete', async () =>
 
   const afterDelete = await (await request('/api/certificates?category=ai', { origin: null })).json();
   assert.equal(afterDelete.length, 0);
+  assert.deepEqual((await (await request('/api/certificates/counts', { origin: null })).json()).ai, 0);
+
+  // Re-upload with the very same id right after deletion (this is exactly
+  // what happens if the owner uploads, deletes, then uploads the "first"
+  // certificate again on a bucket that is otherwise still empty).
+  const reuploadForm = new FormData();
+  reuploadForm.append('id', uploaded.id);
+  reuploadForm.append('category', 'ai');
+  reuploadForm.append('name', 'Повторная загрузка.pdf');
+  reuploadForm.append('description', '');
+  reuploadForm.append('file', new Blob([Buffer.from('%PDF-1.4 fake 2')], { type: 'application/pdf' }), 'cert2.pdf');
+  const reuploadResponse = await request('/api/certificates', { method: 'POST', cookie, body: reuploadForm });
+  assert.equal(reuploadResponse.status, 201);
+  assert.equal((await reuploadResponse.json()).name, 'Повторная загрузка.pdf');
+});
+
+test('upload with a preview file stores it and returns a ready-made previewUrl (empty-bucket first-certificate case)', async () => {
+  const cookie = await login();
+  const form = new FormData();
+  form.append('id', '3fa85f64-5717-4562-b3fc-2c963f66afb0');
+  form.append('category', 'ai');
+  form.append('name', 'Первый сертификат.pdf');
+  form.append('description', 'Описание первого сертификата');
+  form.append('file', new Blob([Buffer.from('%PDF-1.4 fake')], { type: 'application/pdf' }), 'cert.pdf');
+  form.append('preview', new Blob([Buffer.from('fake-webp-bytes')], { type: 'image/webp' }), 'preview.webp');
+
+  const response = await request('/api/certificates', { method: 'POST', cookie, body: form });
+  assert.equal(response.status, 201);
+  const row = await response.json();
+  // Exactly the shape normalizeCloudRow()/render()/buildCertCard() on the
+  // client expect — no leaking of internal S3 keys, just ready-made URLs.
+  assert.deepEqual(Object.keys(row).sort(), ['category', 'created_at', 'description', 'fileUrl', 'id', 'name', 'previewUrl', 'type']);
+  assert.equal(row.previewUrl, 'https://cdn.example.test/previews/ai/3fa85f64-5717-4562-b3fc-2c963f66afb0.webp');
+  assert.equal(row.fileUrl.startsWith('https://cdn.example.test/originals/ai/3fa85f64-5717-4562-b3fc-2c963f66afb0/'), true);
+
+  const listed = await (await request('/api/certificates?category=ai', { origin: null })).json();
+  assert.equal(listed.find((c) => c.id === row.id).previewUrl, row.previewUrl);
 });
 
 test('upload rejects a disallowed MIME type', async () => {
