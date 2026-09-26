@@ -1409,8 +1409,8 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 .cert-upload-modal{position:fixed;inset:0;z-index:12000;display:none;align-items:center;justify-content:center;padding:24px}
 .cert-upload-modal.is-open{display:flex}
 .cert-upload-backdrop{position:absolute;inset:0;background:rgba(8,14,24,.62);backdrop-filter:blur(10px)}
-.cert-upload-dialog{position:relative;display:flex;flex-direction:column;width:min(560px,94vw);max-height:min(88vh,720px);padding:34px;border-radius:28px;background:rgba(250,252,255,.985);box-shadow:0 28px 90px rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.8);color:#10233a;text-align:center}
-.cert-upload-scroll{overflow-y:auto;flex:1 1 auto;min-height:0}
+.cert-upload-dialog{position:relative;display:flex;flex-direction:column;box-sizing:border-box;width:min(560px,94vw);max-height:min(calc(100vh - 48px),720px);max-height:min(calc(100dvh - 48px),720px);overflow:hidden;padding:34px;border-radius:28px;background:rgba(250,252,255,.985);box-shadow:0 28px 90px rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.8);color:#10233a;text-align:center}
+.cert-upload-scroll{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1 1 auto;min-height:0}
 .cert-upload-close{position:absolute;right:16px;top:12px;width:40px;height:40px;border:0;border-radius:50%;background:#edf3f8;color:#23384e;font-size:28px;line-height:1;cursor:pointer}
 .cert-upload-icon{width:66px;height:66px;margin:4px auto 14px;border-radius:20px;display:grid;place-items:center;font-size:36px;color:#fff;background:linear-gradient(135deg,#1786e6,#0e67bd);box-shadow:0 12px 28px rgba(22,120,211,.25)}
 .cert-upload-dialog h2{font-size:30px;line-height:1.1;margin:0 0 10px}
@@ -1431,6 +1431,34 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 .cert-description-field{display:block;margin-top:16px;text-align:left}.cert-description-field>span{display:block;margin-bottom:7px;color:#17334d;font-size:14px;font-weight:800}.cert-description-field>span small{font-weight:600;color:#7a8c9d}.cert-description-field textarea{width:100%;resize:vertical;min-height:112px;max-height:220px;padding:13px 14px;border:1px solid #c8d9e7;border-radius:14px;background:#fff;color:#10233a;font:14px/1.5 Arial,Helvetica,sans-serif;outline:none;transition:border-color .18s ease,box-shadow .18s ease}.cert-description-field textarea:focus{border-color:#5ca9e8;box-shadow:0 0 0 3px rgba(22,120,211,.10)}.cert-description-hint{display:block;margin-top:6px;color:#7a8c9d;font-size:12px;line-height:1.4}
 .cert-upload-primary{width:100%;flex:0 0 auto;margin-top:18px;padding:14px 18px;border:0;border-radius:16px;background:linear-gradient(135deg,#1678d3,#2095f2);color:white;font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 12px 26px rgba(22,120,211,.22)}
 .cert-upload-primary:disabled{opacity:.42;cursor:not-allowed;box-shadow:none}
+
+/* Short-viewport adaptation: shrink spacing/box heights (not text) so the
+   dialog's own max-height clamp above has to scroll less, and the submit
+   button needs less room to stay reachable without scrolling. */
+@media(max-height:800px){
+  .cert-upload-dialog{padding:26px 34px}
+  .cert-upload-icon{width:52px;height:52px;font-size:28px;margin:2px auto 10px}
+  .cert-file-zone{min-height:140px}
+  .cert-rotate-wrap{margin-top:10px}
+  .cert-rotate-preview,.cert-rotate-preview img{max-height:190px}
+  .cert-description-field{margin-top:12px}
+  .cert-description-field textarea{min-height:90px}
+  .cert-upload-primary{margin-top:12px;padding:12px 18px}
+}
+@media(max-height:650px){
+  .cert-upload-dialog{padding:18px 28px}
+  .cert-upload-icon{width:40px;height:40px;border-radius:14px;font-size:22px;margin:0 auto 8px}
+  .cert-upload-dialog h2{font-size:22px;margin:0 0 6px}
+  .cert-upload-dialog p{margin:0 auto 12px}
+  .cert-file-zone{min-height:96px}
+  .cert-file-zone-title{font-size:15px}
+  .cert-rotate-wrap{margin-top:8px}
+  .cert-rotate-actions{margin-top:8px}
+  .cert-rotate-preview,.cert-rotate-preview img{max-height:110px}
+  .cert-description-field{margin-top:8px}
+  .cert-description-field textarea{min-height:64px}
+  .cert-upload-primary{margin-top:10px;padding:10px 16px;font-size:15px}
+}
 
 /* Certificate details modal — premium dark two-column panel */
 .cert-details-modal{position:fixed;inset:0;z-index:12100;display:none;align-items:center;justify-content:center;padding:28px}.cert-details-modal.is-open{display:flex}.cert-details-backdrop{position:absolute;inset:0;background:rgba(4,10,17,.72);backdrop-filter:blur(16px) saturate(.85)}
@@ -2553,17 +2581,14 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 </style>
 
 <style>
-/* === v31: single page scrollbar + complete details scrolling === */
+/* === v31: complete details scrolling ===
+   (The cert-workspace gallery used to grow the whole page here instead of
+   scrolling on its own — reverted: with 20-50 certificates in one category
+   that made the page grow without bound. The gallery now scrolls inside its
+   own bounded region again, using the scrollbar already styled above; see
+   the layout synchronizer script below, which no longer inflates the scene
+   height to the gallery's full content height.) */
 @media (min-width:901px){
-  /* The certificate gallery grows the page instead of creating a second nested scrollbar. */
-  #certificates-page .cert-workspace{
-    bottom:auto!important;
-    overflow:visible!important;
-    overscroll-behavior:auto!important;
-    scrollbar-gutter:auto!important;
-  }
-  #certificates-page .cert-workspace::-webkit-scrollbar{display:none!important}
-
   /* Details: left certificate stays fixed; only the right column scrolls. */
   .cert-details-dialog{
     height:min(84vh,800px)!important;
@@ -2598,8 +2623,10 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 }
 </style>
 <script>
-/* v31 layout synchronizer: preserve the original artwork position, but let the
-   certificate workspace expand the outer page so there is only one scrollbar. */
+/* v31 layout synchronizer: keeps the certificate workspace's top edge aligned
+   with the background artwork as it scales with viewport width. The scene
+   height now always tracks just the artwork — the workspace gallery scrolls
+   inside its own bounded region (bottom:0) instead of inflating the page. */
 (function(){
   const page=document.getElementById('certificates-page');
   const scene=page && page.querySelector('.desktop-scene');
@@ -2618,9 +2645,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
     if(!artHeight)return;
     const workspaceTop=Math.round(artHeight*0.5235);
     workspace.style.top=workspaceTop+'px';
-    const isOpen=!workspace.classList.contains('is-idle') && !content.hidden;
-    const needed=isOpen ? workspaceTop+workspace.scrollHeight : artHeight;
-    scene.style.minHeight=Math.ceil(Math.max(artHeight,needed))+'px';
+    scene.style.minHeight=Math.ceil(artHeight)+'px';
   }
 
   const ro=new ResizeObserver(()=>requestAnimationFrame(syncCertificatePageHeight));
