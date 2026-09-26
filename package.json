@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "migrate:certificates": "node scripts/migrate-certificates.js"
   },
   "engines": {
     "node": ">=20"
