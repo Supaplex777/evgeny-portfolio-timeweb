@@ -3,6 +3,7 @@ const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
 const path = require('path');
 const { createTerraIntelRouter, terraIntelPageHeaders } = require('./lib/terraintel');
+const { createCertificatesRouter, getCertificatesSummaryForAI } = require('./lib/certificates');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -170,31 +171,18 @@ app.post('/api/ai', aiRateLimiter, async (req, res) => {
 
     let certificatesContext = '';
     try {
-      const certResponse = await fetch(
-        `${SUPABASE_URL}/rest/v1/portfolio_certificates?select=category,name,description,created_at&order=created_at.desc`,
-        {
-          headers: {
-            apikey: SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
-          },
-          signal: AbortSignal.timeout(5000)
-        }
-      );
-
-      if (certResponse.ok) {
-        const certs = await certResponse.json();
-        if (Array.isArray(certs) && certs.length) {
-          certificatesContext =
-            '\n\nСЕРТИФИКАТЫ ИЗ ОБЛАЧНОЙ БАЗЫ:\n' +
-            certs.map((c, i) => {
-              const desc = String(c.description || '').trim();
-              const date = c.created_at ? String(c.created_at).slice(0, 10) : '';
-              return `${i + 1}. ${c.name} | категория: ${c.category}${date ? ' | дата: ' + date : ''}${desc ? ' | описание: ' + desc : ''}`;
-            }).join('\n');
-        }
+      const certs = await getCertificatesSummaryForAI();
+      if (Array.isArray(certs) && certs.length) {
+        certificatesContext =
+          '\n\nСЕРТИФИКАТЫ ИЗ ОБЛАЧНОЙ БАЗЫ:\n' +
+          certs.map((c, i) => {
+            const desc = String(c.description || '').trim();
+            const date = c.created_at ? String(c.created_at).slice(0, 10) : '';
+            return `${i + 1}. ${c.name} | категория: ${c.category}${date ? ' | дата: ' + date : ''}${desc ? ' | описание: ' + desc : ''}`;
+          }).join('\n');
       }
     } catch (e) {
-      // If Supabase is unavailable, AI can still answer from page context.
+      // If certificate storage is unavailable, AI can still answer from page context.
     }
 
     const system = [
@@ -275,6 +263,8 @@ app.post('/api/ai', aiRateLimiter, async (req, res) => {
 
 // TerraIntel AI backend (separate prompt, model, limits). Must stay above the SPA fallback.
 app.use('/api/terraintel', createTerraIntelRouter());
+// Certificates backend (Timeweb Cloud S3). Must stay above the SPA fallback.
+app.use('/api/certificates', createCertificatesRouter());
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

@@ -12,8 +12,11 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1141.0",
+    "bcryptjs": "^3.0.3",
     "express": "^4.21.2",
     "express-rate-limit": "^8.7.0",
-    "helmet": "^8.3.0"
+    "helmet": "^8.3.0",
+    "multer": "^2.4.0"
   }
 }

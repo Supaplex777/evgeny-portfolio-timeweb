@@ -1454,7 +1454,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
   .cert-thumb{width:96px;height:78px}
 }
 </style>
-<!-- v56 cloud documents: Supabase SDK. Existing visual/animation code is untouched. -->
+<!-- v57 cloud documents: certificates backend at /api/certificates (Timeweb S3). Supabase SDK stays loaded for the Projects section below. Existing visual/animation code is untouched. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
@@ -1503,25 +1503,13 @@ html.skills-open,body.skills-open{overflow:hidden!important}
   if(content)content.hidden=true;
   if(mobilePanel)mobilePanel.hidden=true;
 
-  /* === v56: shared cloud document storage ===
-     Public visitors read certificates from Supabase.
-     Owner writes are available only in ?admin=1 mode after Supabase Auth login.
-     Until URL/key are filled in, the original IndexedDB behaviour remains active,
-     so this file can still be tested locally without breaking the existing site. */
-  const SUPABASE_URL='https://rhzxaaaszbuwrjgucrev.supabase.co';
-  const SUPABASE_PUBLISHABLE_KEY='sb_publishable_V2h_WY-l64ymLw8-u3jL5w_RNbLnLSf';
-  const SUPABASE_BUCKET='portfolio-certificates';
-  const SUPABASE_TABLE='portfolio_certificates';
+  /* === v57: certificates now served by our own backend (/api/certificates/*),
+     which stores files in Timeweb Cloud S3. Public visitors read certificates
+     through this same-origin API; owner writes require ?admin=1 plus a
+     server-verified session (see requireOwner()). The IndexedDB fallback below
+     stays in place for local testing when the backend route isn't available. */
   const ADMIN_MODE=(location.protocol==='file:') || new URLSearchParams(location.search).get('admin')==='1';
-  const CLOUD_ENABLED=/^https:\/\/.+\.supabase\.co$/i.test(SUPABASE_URL)
-    && !SUPABASE_PUBLISHABLE_KEY.startsWith('__')
-    && !!window.supabase;
-  const cloud=CLOUD_ENABLED
-    ? window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
-        auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
-      })
-    : null;
-  window.__portfolioSupabase=cloud;
+  const CLOUD_ENABLED=location.protocol!=='file:';
 
   const DB_NAME='evgenyPortfolioCertificates';
   const STORE='certificates';
@@ -1536,10 +1524,6 @@ html.skills-open,body.skills-open{overflow:hidden!important}
       .replace(/[^\w\-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,70)||'document';
     return stem+ext;
   }
-  function publicStorageUrl(path){
-    if(!cloud||!path)return '';
-    return cloud.storage.from(SUPABASE_BUCKET).getPublicUrl(path).data.publicUrl||'';
-  }
   function normalizeCloudRow(row){
     return {
       id:row.id,
@@ -1548,41 +1532,36 @@ html.skills-open,body.skills-open{overflow:hidden!important}
       type:row.type||'',
       created:new Date(row.created_at).getTime(),
       description:row.description||'',
-      filePath:row.file_path,
-      previewPath:row.preview_path||'',
-      fileUrl:publicStorageUrl(row.file_path),
-      previewUrl:publicStorageUrl(row.preview_path)
+      filePath:row.fileUrl||'',
+      previewPath:row.previewUrl||'',
+      fileUrl:row.fileUrl||'',
+      previewUrl:row.previewUrl||''
     };
+  }
+  async function apiJson(response){
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||'Запрос к серверу не удался.');
+    return data;
   }
   async function requireOwner(){
     if(!CLOUD_ENABLED)return true;
     if(!ADMIN_MODE)throw new Error('Режим владельца выключен');
-    const {data:{session}}=await cloud.auth.getSession();
-    if(session)return true;
-    const email=prompt('Вход владельца сайта\nEmail Supabase:');
-    if(!email)throw new Error('Вход отменён');
-    const password=prompt('Пароль владельца Supabase:');
+    const sessionCheck=await fetch('/api/certificates/session',{credentials:'same-origin'}).catch(()=>null);
+    const session=sessionCheck&&sessionCheck.ok?await sessionCheck.json().catch(()=>null):null;
+    if(session&&session.authenticated)return true;
+    const password=prompt('Вход владельца сайта\nПароль:');
     if(!password)throw new Error('Вход отменён');
-    const {error}=await cloud.auth.signInWithPassword({email:email.trim(),password});
-    if(error)throw error;
+    await apiJson(await fetch('/api/certificates/login',{
+      method:'POST',credentials:'same-origin',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({password})
+    }));
     return true;
   }
   async function getAllFor(category){
     if(!CLOUD_ENABLED)return localGetAllFor(category);
-    const {data,error}=await cloud.from(SUPABASE_TABLE)
-      .select('id,category,name,type,created_at,description,file_path,preview_path')
-      .eq('category',category)
-      .order('created_at',{ascending:false});
-    if(error)throw error;
-    return (data||[]).map(normalizeCloudRow);
-  }
-  async function uploadCloudBlob(path,blob,contentType){
-    const {error}=await cloud.storage.from(SUPABASE_BUCKET).upload(path,blob,{
-      contentType:contentType||blob.type||'application/octet-stream',
-      upsert:true,
-      cacheControl:'3600'
-    });
-    if(error)throw error;
+    const rows=await apiJson(await fetch('/api/certificates?category='+encodeURIComponent(category),{credentials:'same-origin'}));
+    return (rows||[]).map(normalizeCloudRow);
   }
   async function putCert(rec){
     if(!CLOUD_ENABLED)return localPutCert(rec);
@@ -1591,58 +1570,39 @@ html.skills-open,body.skills-open{overflow:hidden!important}
     /* New document upload */
     if(rec.blob && !rec.filePath){
       const id=String(rec.id);
-      const originalPath='documents/'+rec.category+'/'+id+'/'+safeFileName(rec.name);
-      await uploadCloudBlob(originalPath,rec.blob,rec.type||rec.blob.type);
-
-      let previewPath=null;
-      try{
-        if(rec.previewBlob){
-          previewPath='previews/'+rec.category+'/'+id+'.webp';
-          await uploadCloudBlob(previewPath,rec.previewBlob,'image/webp');
-        }
-        const {error}=await cloud.from(SUPABASE_TABLE).insert({
-          id,
-          category:rec.category,
-          name:rec.name,
-          type:rec.type||'',
-          created_at:new Date(rec.created||Date.now()).toISOString(),
-          description:rec.description||'',
-          file_path:originalPath,
-          preview_path:previewPath
-        });
-        if(error)throw error;
-      }catch(error){
-        await cloud.storage.from(SUPABASE_BUCKET).remove([originalPath].concat(previewPath?[previewPath]:[])).catch(()=>{});
-        throw error;
-      }
+      const form=new FormData();
+      form.append('id',id);
+      form.append('category',rec.category);
+      form.append('name',rec.name);
+      form.append('description',rec.description||'');
+      form.append('created',String(rec.created||Date.now()));
+      form.append('file',rec.blob,safeFileName(rec.name));
+      if(rec.previewBlob)form.append('preview',rec.previewBlob,id+'.webp');
+      await apiJson(await fetch('/api/certificates',{method:'POST',credentials:'same-origin',body:form}));
       return;
     }
 
     /* Existing document update: description and/or generated preview. */
-    const patch={description:rec.description||''};
+    const form=new FormData();
+    form.append('category',rec.category);
+    form.append('description',rec.description||'');
     if(rec.previewBlob && !rec.previewPath){
-      const previewPath='previews/'+rec.category+'/'+rec.id+'.webp';
-      await uploadCloudBlob(previewPath,rec.previewBlob,'image/webp');
-      patch.preview_path=previewPath;
-      rec.previewPath=previewPath;
-      rec.previewUrl=publicStorageUrl(previewPath);
+      form.append('preview',rec.previewBlob,String(rec.id)+'.webp');
     }
-    const {error}=await cloud.from(SUPABASE_TABLE).update(patch).eq('id',String(rec.id));
-    if(error)throw error;
+    const updated=await apiJson(await fetch('/api/certificates/'+encodeURIComponent(String(rec.id)),{
+      method:'PATCH',credentials:'same-origin',body:form
+    }));
+    if(updated.previewUrl){
+      rec.previewPath=updated.previewUrl;
+      rec.previewUrl=updated.previewUrl;
+    }
   }
   async function deleteCert(id){
     if(!CLOUD_ENABLED)return localDeleteCert(id);
     await requireOwner();
-    const {data,error}=await cloud.from(SUPABASE_TABLE)
-      .select('file_path,preview_path').eq('id',String(id)).single();
-    if(error)throw error;
-    const paths=[data.file_path,data.preview_path].filter(Boolean);
-    if(paths.length){
-      const {error:storageError}=await cloud.storage.from(SUPABASE_BUCKET).remove(paths);
-      if(storageError)throw storageError;
-    }
-    const {error:deleteError}=await cloud.from(SUPABASE_TABLE).delete().eq('id',String(id));
-    if(deleteError)throw deleteError;
+    await apiJson(await fetch('/api/certificates/'+encodeURIComponent(String(id)),{
+      method:'DELETE',credentials:'same-origin'
+    }));
   }
   async function getCertificateCounts(){
     if(!CLOUD_ENABLED){
@@ -1660,12 +1620,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
         tx.onabort=()=>reject(tx.error||new Error('Certificate count transaction aborted'));
       });
     }
-    const {data,error}=await cloud.from(SUPABASE_TABLE).select('category');
-    if(error)throw error;
-    const result={};
-    Object.keys(categories).forEach(k=>result[k]=0);
-    (data||[]).forEach(row=>{if(row.category in result)result[row.category]++});
-    return result;
+    return apiJson(await fetch('/api/certificates/counts',{credentials:'same-origin'}));
   }
 
   /* In cloud mode the public portfolio is read-only.
@@ -2192,7 +2147,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
       }
     }catch(e){
       console.error(e);
-      alert(CLOUD_ENABLED?'Не удалось загрузить файл в облако. Проверьте вход владельца и настройки Supabase.':'Не удалось сохранить файл в браузере. Попробуйте ещё раз.');
+      alert(CLOUD_ENABLED?e.message||'Не удалось загрузить файл в облако. Проверьте вход владельца.':'Не удалось сохранить файл в браузере. Попробуйте ещё раз.');
     }finally{
       primary.textContent='Добавить сертификат';primary.disabled=false;
     }
