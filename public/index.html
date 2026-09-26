@@ -24,6 +24,16 @@
 .hs-tag-ai:focus-visible::after,.hs-tag-agents:focus-visible::after,.hs-tag-python:focus-visible::after,.hs-tag-sql:focus-visible::after,.hs-tag-api:focus-visible::after,.hs-tag-pbi:focus-visible::after,.hs-tag-nocode:focus-visible::after,.hs-tag-data:focus-visible::after,.hs-tag-int:focus-visible::after{opacity:1;box-shadow:0 10px 20px rgba(76,134,187,.14), inset 0 0 0 1px rgba(80,167,237,.2)}
 .hs-tag-ai:hover,.hs-tag-agents:hover,.hs-tag-python:hover,.hs-tag-sql:hover,.hs-tag-api:hover,.hs-tag-pbi:hover,.hs-tag-nocode:hover,.hs-tag-data:hover,.hs-tag-int:hover,
 .hs-tag-ai:focus-visible,.hs-tag-agents:focus-visible,.hs-tag-python:focus-visible,.hs-tag-sql:focus-visible,.hs-tag-api:focus-visible,.hs-tag-pbi:focus-visible,.hs-tag-nocode:focus-visible,.hs-tag-data:focus-visible,.hs-tag-int:focus-visible{transform:translateY(-1px) scale(1.02)}
+/* The hero mockup photo (hero-space-clean.png) has a leftover placeholder
+   info bar baked into its own pixels near the bottom (stale year, a typo'd
+   email) — a design-mockup artifact, not a real DOM element, so it can't be
+   removed by editing markup; the real, correct, single footer is the
+   <footer class="legal-footer"> at the page bottom. This purely-visual,
+   non-interactive blur mask sits over that baked-in spot (measured at the
+   image's native 1672x941 resolution, same percentage system as the
+   hotspots below) so only the one real footer remains readable. */
+.hero-art-legacy-mask{position:absolute;pointer-events:none;left:16vw;top:46.6vw;width:68vw;height:3.6vw;z-index:9;border-radius:14px;backdrop-filter:blur(40px) saturate(1.3);-webkit-backdrop-filter:blur(40px) saturate(1.3);background:linear-gradient(90deg,rgba(8,15,24,0),#0b1626 8%,#0b1626 92%,rgba(8,15,24,0))}
+@media(max-width:900px){.hero-art-legacy-mask{display:none}}
 /* hotspots: percentages based on approved 1672x941 mockup */
 .hs-contact-btn{right:3.6%;top:2.1%;width:11.0%;height:6.2%}.hs-view-projects{left:3.9%;top:55.1%;width:15.7%;height:6.9%}.hs-download{left:20.3%;top:55.1%;width:15.1%;height:6.9%}.hs-tag-ai{left:4.0%;top:65.1%;width:7.6%;height:4.2%}.hs-tag-agents{left:11.8%;top:65.1%;width:6.6%;height:4.2%}.hs-tag-python{left:18.3%;top:65.1%;width:5.3%;height:4.2%}.hs-tag-sql{left:23.5%;top:65.1%;width:4.5%;height:4.2%}.hs-tag-api{left:28%;top:65.1%;width:3.8%;height:4.2%}.hs-tag-pbi{left:31.8%;top:65.1%;width:5.3%;height:4.2%}.hs-tag-nocode{left:4.0%;top:70.0%;width:5.8%;height:4.2%}.hs-tag-data{left:9.6%;top:70.0%;width:10.1%;height:4.2%}.hs-tag-int{left:20.0%;top:70.0%;width:6.9%;height:4.2%}
 .hero-mobile{display:none}.section{padding:92px 24px}.wrap{max-width:var(--max);margin:auto}.section-light{background:#fff}.section-soft{background:linear-gradient(180deg,#f3f8fc,#edf4f9)}.section-dark{background:#0d1b2d;color:#f4f8fb}.section-kicker{font-size:.78rem;letter-spacing:.25em;text-transform:uppercase;color:#5d7a98;font-weight:700}.section h2{font-size:clamp(2rem,4vw,3.7rem);line-height:1.05;margin:.35em 0 .7em;letter-spacing:-.04em}.split{display:grid;grid-template-columns:1fr 1fr;gap:70px}.lead{font-size:1.16rem;color:#465b71}.timeline{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}.timeline-card,.card,.cert{background:#fff;border:1px solid var(--line);border-radius:24px;padding:28px;box-shadow:0 8px 30px rgba(24,56,85,.05)}.timeline-card.featured{border-color:#a8cef0;background:linear-gradient(135deg,#fff,#f2f8fd)}.date{font-size:.8rem;color:#60809f;font-weight:700}.role{font-weight:600;color:#3c6082}.cards{display:grid;gap:18px}.projects-grid{grid-template-columns:repeat(2,1fr)}.num{font-weight:800;color:#8cb8dd}.pill{display:inline-block;margin-top:12px;padding:7px 10px;background:#eef6fc;border-radius:999px;font-size:.8rem}.text-link{display:inline-block;margin-top:12px;color:var(--blue);font-weight:700}.skill-groups{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:#27405b;border-radius:24px;overflow:hidden}.skill-groups>div{background:#102238;padding:32px}.skill-groups h3{margin-top:0;font-size:1.35rem}.skill-groups p{color:#b9c7d6}.cert-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.cert span{font-size:.78rem;font-weight:800;color:#3d7fb8}.cert.current{background:#eef7ff;border-color:#b8d9f4}.contact-section{background:linear-gradient(135deg,#eaf5fd,#fff)}.contact-card{display:flex;align-items:center;justify-content:space-between;gap:30px;background:white;border:1px solid var(--line);border-radius:30px;padding:42px;box-shadow:var(--shadow)}.contact-actions{display:flex;gap:12px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:14px 20px;border:1px solid #cbd9e6;border-radius:14px;text-decoration:none;font-weight:700;background:#fff;position:relative;overflow:hidden;transition:transform .24s ease,box-shadow .24s ease,border-color .24s ease,background-color .24s ease}
@@ -72,7 +82,28 @@ footer{padding:26px 24px;background:#091524;color:#b8c6d5}.footer-inner{display:
 .btn.primary:hover,.btn.primary:focus-visible{box-shadow:0 15px 32px rgba(21,134,216,.28)!important}
 .btn:active{transform:translateY(0) scale(.975);transition-duration:.08s;box-shadow:0 4px 10px rgba(21,86,143,.12)!important}
 
-@media (prefers-reduced-motion:reduce){.hotspot,.btn{transition:none!important}.premium-ripple{display:none!important}}
+/* Desktop hero CTAs: real glass/premium buttons instead of bare text
+   over the mockup's own baked-in button graphic (the .hotspot box was
+   fully transparent, so its default underlined link text just floated
+   on top of the image's buttons — this gives it real visuals that cover
+   that spot, plus proper hover/focus/active states). Geometry (left/top/
+   width/height) stays exactly as-is; only appearance changes here. */
+.ui-button{display:flex;align-items:center;justify-content:center;gap:.55em;padding:0 clamp(14px,1.6vw,26px);font-family:inherit;font-size:clamp(14px,1.05vw,17px);font-weight:700;letter-spacing:-.01em;text-decoration:none;white-space:nowrap;border-radius:14px}
+.ui-primary{color:#fff;background:linear-gradient(135deg,#1c8bec,#0d5fb8);border:1px solid rgba(255,255,255,.24);box-shadow:0 10px 26px rgba(9,70,140,.35)}
+.ui-primary:hover,.ui-primary:focus-visible{box-shadow:0 16px 36px rgba(9,90,180,.48)}
+.ui-primary:active{transform:translateY(0) scale(.98)!important;box-shadow:0 6px 16px rgba(9,70,140,.32)}
+.ui-primary:focus-visible{outline:2px solid #8ad6ff!important;outline-offset:3px}
+.ui-primary .ui-arrow{display:inline-block;transition:transform .24s ease}
+.ui-primary:hover .ui-arrow,.ui-primary:focus-visible .ui-arrow{transform:translateX(4px)}
+
+.ui-secondary{color:#12233c;background:#f3f8fc;border:1px solid rgba(255,255,255,.9);box-shadow:0 10px 22px rgba(6,18,32,.18)}
+.ui-secondary:hover,.ui-secondary:focus-visible{background:#fff;box-shadow:0 14px 28px rgba(6,18,32,.24)}
+.ui-secondary:active{transform:translateY(0) scale(.98)!important;box-shadow:0 5px 12px rgba(6,18,32,.16)}
+.ui-secondary:focus-visible{outline:2px solid #1678d3!important;outline-offset:3px}
+.ui-secondary .ui-download-icon{display:inline-block;font-size:1.05em;line-height:1;transition:transform .24s ease}
+.ui-secondary:hover .ui-download-icon,.ui-secondary:focus-visible .ui-download-icon{transform:translateY(2px)}
+
+@media (prefers-reduced-motion:reduce){.hotspot,.btn{transition:none!important}.premium-ripple{display:none!important}.ui-primary .ui-arrow,.ui-secondary .ui-download-icon{transition:none!important}}
 
 
 /* === Monitor AI Command Center v18 ===
@@ -517,6 +548,7 @@ html.about-open #about .about-space-stage::before,html.about-open #about .about-
     </div>
 
 <nav class="hotspots" aria-label="Основная навигация">
+      <div class="hero-art-legacy-mask" aria-hidden="true"></div>
       <nav class="hero-nav" aria-label="Основная навигация">
         <a data-target="about" href="#about">Обо мне</a>
         <a data-target="projects" href="#projects">Проекты</a>
@@ -3128,11 +3160,12 @@ new ResizeObserver(fit).observe(art);window.addEventListener('resize',fit);docum
     if(!link) return;
     event.preventDefault();
     const x=window.scrollX,y=window.scrollY;
-    history.replaceState(null,'','#about');
-    document.documentElement.classList.add('about-open');
-    document.documentElement.classList.add('portfolio-info-open');
-    document.body.classList.add('portfolio-info-open');
-    window.dispatchEvent(new Event('hashchange'));
+    // A real hash navigation (not history.replaceState) so CSS :target
+    // re-evaluates for every .portfolio-info page, not just #about: without
+    // this, replaceState left the PREVIOUS :target page (#projects/#skills/
+    // #certificates-page/#contacts) stuck visible on top of #about, silently
+    // swallowing every click made from within it.
+    if(location.hash!=='#about') location.hash='about';
     requestAnimationFrame(()=>window.scrollTo({left:x,top:y,behavior:'instant'}));
   });
 })();
