@@ -163,27 +163,17 @@ html,body{
    ultrawide-only rule below, which only resized the image and left
    hotspots/nav misaligned. */
 @media (min-width:901px) and (max-aspect-ratio:20/9){
+/* Fills the space beside the now-narrower hero box with a flat
+   vertical gradient sampled from the hero image's own left/right edge
+   colours (light cool grey up top, warm khaki/olive toward the desk
+   at the bottom) - reads as a deliberate canvas colour, not a second
+   copy of the photo, so there is no competing image content and no
+   visible seam. Applied on body itself (not a separate layer), so it
+   plays no part in the hotspot/nav/canvas coordinate system below. */
 body{
-  background:#fff;
-}
-/* Fills the space beside the now-narrower hero box with a soft,
-   blurred blow-up of the same hero image instead of flat white -
-   reads as one continuous scene instead of a picture with margins.
-   Purely decorative: position:fixed behind everything, so it plays
-   no part in the hotspot/nav/canvas coordinate system above. */
-body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  z-index:0;
-  background:url(assets/hero-space-v2.webp?v=20260927) center/cover no-repeat;
-  filter:blur(60px) saturate(1.05) brightness(.94);
-  transform:scale(1.15);
-  pointer-events:none;
+  background:linear-gradient(180deg,#b9b7b7 0%,#b9b49c 25%,#e6ddd5 45%,#958b67 68%,#655c2e 85%,#423e14 100%);
 }
 .hero-desktop{
-  position:relative;
-  z-index:1;
   width:min(100vw,177.8vh);
   margin:0 auto;
 }
