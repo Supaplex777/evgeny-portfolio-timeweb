@@ -32,9 +32,9 @@ app.use(express.static(path.join(__dirname, 'public'), {
   etag: true
 }));
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rhzxaaaszbuwrjgucrev.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_V2h_WY-l64ymLw8-u3jL5w_RNbLnLSf';
 const POLZA_API_URL = 'https://polza.ai/api/v1/chat/completions';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
 const aiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -66,6 +66,38 @@ const escapeHtml = (value) => String(value)
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#039;');
 
+// Telegram is the primary delivery channel for the contact form. Plain text
+// only (no parse_mode) - Telegram does not interpret any markup in that
+// mode, so nothing a visitor types into the form can inject formatting or
+// break the message structure. Throws on failure; the caller maps the
+// error to a response. Never log the constructed URL/response.url - it
+// embeds TELEGRAM_BOT_TOKEN.
+async function sendTelegramContactNotification({ name, contact, projectType, message, pageUrl }) {
+  const text = [
+    '🔔 Новая заявка с сайта',
+    '',
+    `👤 Имя: ${name}`,
+    `📱 Контакт: ${contact}`,
+    `🧩 Тип проекта: ${projectType || 'Другое'}`,
+    `📝 Сообщение: ${message}`,
+    '',
+    `🌐 Страница: ${pageUrl}`,
+    `🕒 Дата (UTC): ${new Date().toISOString()}`
+  ].join('\n');
+
+  const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text }),
+    signal: AbortSignal.timeout(8000)
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`Telegram API responded ${response.status}: ${body.slice(0, 300)}`);
+  }
+}
+
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
@@ -81,10 +113,18 @@ app.post('/api/contact', contactRateLimiter, async (req, res) => {
   const message = cleanText(req.body?.message, 2000);
   const honeypot = cleanText(req.body?.company, 120);
 
-  // Pretend success for bots without storing or sending anything.
+  // Pretend success for bots without sending anything.
   if (honeypot) return res.status(204).end();
   if (name.length < 2 || contact.length < 3 || message.length < 10) {
     return res.status(400).json({ error: 'Заполните имя, контакты и описание задачи.' });
+  }
+
+  // Telegram is the primary (only required) delivery channel now - fail
+  // fast and honestly instead of claiming success for a request nobody
+  // will ever see.
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    console.error('Contact request rejected: Telegram is not configured (TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID missing).');
+    return res.status(500).json({ error: 'Приём заявок временно недоступен. Напишите нам в Telegram или на почту напрямую.' });
   }
 
   const fingerprint = `${req.ip}|${name.toLowerCase()}|${contact.toLowerCase()}|${message.toLowerCase()}`;
@@ -93,41 +133,37 @@ app.post('/api/contact', contactRateLimiter, async (req, res) => {
     return res.status(409).json({ error: 'Такая заявка уже была отправлена. Проверьте почту или напишите в Telegram.' });
   }
 
+  const pageUrl = cleanText(req.get('origin') || req.get('referer') || '', 500) || 'Не указан';
+
   try {
-    const saveResponse = await fetch(`${SUPABASE_URL}/rest/v1/contact_requests`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=minimal'
-      },
-      body: JSON.stringify({
-        name,
-        contact,
-        project_type: projectType || 'Другое',
-        message
-      }),
-      signal: AbortSignal.timeout(8000)
+    await sendTelegramContactNotification({ name, contact, projectType, message, pageUrl });
+  } catch (error) {
+    // Never log the raw error/response.url here - it contains TELEGRAM_BOT_TOKEN.
+    console.error('Contact Telegram notification failed:', error?.message || 'unknown error');
+    const unreachable = error?.name === 'TimeoutError' || error?.name === 'AbortError' || error?.name === 'TypeError';
+    return res.status(unreachable ? 503 : 502).json({
+      error: unreachable
+        ? 'Telegram временно недоступен. Попробуйте ещё раз чуть позже или напишите нам напрямую.'
+        : 'Не удалось отправить заявку в Telegram. Попробуйте позже или напишите нам напрямую.'
     });
+  }
 
-    if (!saveResponse.ok) {
-      console.error('Contact request was not saved:', saveResponse.status, await saveResponse.text());
-      return res.status(502).json({ error: 'Не удалось принять заявку. Попробуйте позже или напишите в Telegram.' });
-    }
+  // Only dedupe requests that actually got through, so a Telegram failure
+  // above never blocks a visitor from immediately retrying.
+  recentContactRequests.set(fingerprint, now);
+  for (const [key, createdAt] of recentContactRequests) {
+    if (createdAt < now - 15 * 60 * 1000) recentContactRequests.delete(key);
+  }
 
-    recentContactRequests.set(fingerprint, now);
-    for (const [key, createdAt] of recentContactRequests) {
-      if (createdAt < now - 15 * 60 * 1000) recentContactRequests.delete(key);
-    }
-
+  // Email stays a best-effort secondary channel: it runs only after
+  // Telegram succeeds, and its own failure never changes the response.
+  let emailSent = false;
+  try {
     const resendKey = process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY;
     const recipient = process.env.CONTACT_EMAIL_TO || 'cmrrus@rambler.ru';
     const sender = process.env.CONTACT_EMAIL_FROM;
-    let emailSent = false;
 
     if (resendKey && sender) {
-      const pageUrl = cleanText(req.get('origin') || req.get('referer') || '', 500) || 'Не указан';
       const emailResponse = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -144,16 +180,15 @@ app.post('/api/contact', contactRateLimiter, async (req, res) => {
         signal: AbortSignal.timeout(10000)
       });
       emailSent = emailResponse.ok;
-      if (!emailSent) console.error('Contact email was not sent:', emailResponse.status, await emailResponse.text());
+      if (!emailSent) console.error('Contact email was not sent:', emailResponse.status, await emailResponse.text().catch(() => ''));
     } else {
-      console.warn('Contact request saved, but Resend is not configured.');
+      console.warn('Contact request sent to Telegram, but Resend is not configured.');
     }
-
-    return res.status(201).json({ ok: true, emailSent });
   } catch (error) {
-    console.error('Contact request error:', error);
-    return res.status(500).json({ error: 'Не удалось обработать заявку. Попробуйте позже или напишите в Telegram.' });
+    console.error('Contact email request failed:', error?.message || 'unknown error');
   }
+
+  return res.status(201).json({ ok: true, telegramSent: true, emailSent });
 });
 
 app.post('/api/ai', aiRateLimiter, async (req, res) => {
