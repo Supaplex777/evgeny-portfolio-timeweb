@@ -67,7 +67,7 @@ evgeny-portfolio-timeweb/
 ```bash
 npm ci
 npm start
-npm test   # тесты TerraIntel API (Polza подменяется заглушкой, сеть и ключ не нужны)
+npm test   # TerraIntel, certificates и /api/contact (сеть и реальные ключи не нужны — все внешние вызовы подменяются заглушками)
 ```
 
 Приложение будет доступно на `http://localhost:3000`.
@@ -76,8 +76,8 @@ npm test   # тесты TerraIntel API (Polza подменяется заглу�
 
 ```text
 POLZA_API_KEY
-SUPABASE_URL
-SUPABASE_PUBLISHABLE_KEY
+TELEGRAM_BOT_TOKEN      # обязательно для приёма заявок — основной канал доставки
+TELEGRAM_CHAT_ID        # обязательно для приёма заявок — основной канал доставки
 CONTACT_EMAIL_TO
 RESEND_API_KEY
 CONTACT_EMAIL_FROM
@@ -90,7 +90,7 @@ TERRAINTEL_DAILY_LIMIT  # общий дневной лимит AI-запросо
 TERRAINTEL_TIMEOUT_MS   # таймаут запроса к Polza, по умолчанию 30000
 ```
 
-`RESEND_API_KEY` и `CONTACT_EMAIL_FROM` нужны только для автоматической отправки заявок на email. Адрес отправителя должен быть подтверждён в Resend. Никогда не добавляйте `.env` или реальные ключи в GitHub.
+`TELEGRAM_BOT_TOKEN` и `TELEGRAM_CHAT_ID` — основной канал доставки заявок с контактной формы (`POST /api/contact`); без них форма вернёт понятную ошибку вместо того, чтобы молча ничего не доставить. `RESEND_API_KEY` и `CONTACT_EMAIL_FROM` — дополнительный best-effort канал: email отправляется вдобавок к Telegram, но его ошибка не влияет на ответ формы. Адрес отправителя должен быть подтверждён в Resend. Никогда не добавляйте `.env` или реальные ключи в GitHub.
 
 ## TerraIntel MVP
 
