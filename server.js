@@ -35,6 +35,8 @@ app.use(express.static(path.join(__dirname, 'public'), {
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rhzxaaaszbuwrjgucrev.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_V2h_WY-l64ymLw8-u3jL5w_RNbLnLSf';
 const POLZA_API_URL = 'https://polza.ai/api/v1/chat/completions';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
 const aiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -65,6 +67,38 @@ const escapeHtml = (value) => String(value)
   .replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#039;');
+
+// Best-effort Telegram notification for a saved contact request. Plain text
+// only (no parse_mode) - Telegram does not interpret any markup in that
+// mode, so nothing a visitor types into the form can inject formatting or
+// break the message structure. Throws on failure; the caller decides how
+// to handle that (it must never fail the contact request itself). Never
+// log the constructed URL/response.url - it embeds TELEGRAM_BOT_TOKEN.
+async function sendTelegramContactNotification({ name, contact, projectType, message, pageUrl }) {
+  const text = [
+    '🔔 Новая заявка с сайта',
+    '',
+    `👤 Имя: ${name}`,
+    `📱 Контакт: ${contact}`,
+    `🧩 Тип проекта: ${projectType || 'Другое'}`,
+    `📝 Сообщение: ${message}`,
+    '',
+    `🌐 Страница: ${pageUrl}`,
+    `🕒 Дата (UTC): ${new Date().toISOString()}`
+  ].join('\n');
+
+  const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text }),
+    signal: AbortSignal.timeout(8000)
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`Telegram API responded ${response.status}: ${body.slice(0, 300)}`);
+  }
+}
 
 app.get('/health', (req, res) => {
   res.status(200).json({
@@ -121,13 +155,14 @@ app.post('/api/contact', contactRateLimiter, async (req, res) => {
       if (createdAt < now - 15 * 60 * 1000) recentContactRequests.delete(key);
     }
 
+    const pageUrl = cleanText(req.get('origin') || req.get('referer') || '', 500) || 'Не указан';
+
     const resendKey = process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY;
     const recipient = process.env.CONTACT_EMAIL_TO || 'cmrrus@rambler.ru';
     const sender = process.env.CONTACT_EMAIL_FROM;
     let emailSent = false;
 
     if (resendKey && sender) {
-      const pageUrl = cleanText(req.get('origin') || req.get('referer') || '', 500) || 'Не указан';
       const emailResponse = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -149,7 +184,22 @@ app.post('/api/contact', contactRateLimiter, async (req, res) => {
       console.warn('Contact request saved, but Resend is not configured.');
     }
 
-    return res.status(201).json({ ok: true, emailSent });
+    let telegramSent = false;
+    if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
+      try {
+        await sendTelegramContactNotification({ name, contact, projectType, message, pageUrl });
+        telegramSent = true;
+      } catch (error) {
+        // Best-effort: the request is already saved, so a Telegram outage
+        // must not turn into an error response for the visitor. Never log
+        // the raw error/response.url here - it contains TELEGRAM_BOT_TOKEN.
+        console.error('Contact Telegram notification failed:', error?.message || 'unknown error');
+      }
+    } else {
+      console.warn('Contact request saved, but Telegram is not configured.');
+    }
+
+    return res.status(201).json({ ok: true, emailSent, telegramSent });
   } catch (error) {
     console.error('Contact request error:', error);
     return res.status(500).json({ error: 'Не удалось обработать заявку. Попробуйте позже или напишите в Telegram.' });
