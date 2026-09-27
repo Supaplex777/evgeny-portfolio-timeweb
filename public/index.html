@@ -166,7 +166,24 @@ html,body{
 body{
   background:#fff;
 }
+/* Fills the space beside the now-narrower hero box with a soft,
+   blurred blow-up of the same hero image instead of flat white -
+   reads as one continuous scene instead of a picture with margins.
+   Purely decorative: position:fixed behind everything, so it plays
+   no part in the hotspot/nav/canvas coordinate system above. */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:0;
+  background:url(assets/hero-space-v2.webp?v=20260927) center/cover no-repeat;
+  filter:blur(60px) saturate(1.05) brightness(.94);
+  transform:scale(1.15);
+  pointer-events:none;
+}
 .hero-desktop{
+  position:relative;
+  z-index:1;
   width:min(100vw,177.8vh);
   margin:0 auto;
 }
