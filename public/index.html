@@ -135,6 +135,16 @@ footer{padding:26px 24px;background:#091524;color:#b8c6d5}.footer-inner{display:
   display:flex;
   align-items:flex-start;
 }
+/* Desktop first screen is a fixed viewport shell: Hero is sized to the
+   viewport already, so the outer document has nothing that legitimately
+   needs to scroll (About/Projects/Skills/Certificates/Contacts are all
+   position:fixed overlays with their own internal overflow:auto, same
+   pattern as html.certificates-open below). Removing outer scroll here
+   removes the browser's native overscroll/rubber-band bounce along with
+   it, instead of trying to mask its background color. */
+html,body{
+  overflow:hidden;
+}
 }
 
 .hero-art{
