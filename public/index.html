@@ -147,6 +147,31 @@ html,body{
 }
 }
 
+/* A real browser's usable viewport (100vh) is almost always shorter
+   than the monitor's raw resolution (address bar, tabs, bookmarks
+   bar, OS chrome all eat into it). Hero's height is width-driven
+   (image aspect ~16:9), so once 100vh drops even a little below what
+   that width implies, the bottom of the composition - desk and mug -
+   was pushed past the fixed, non-scrolling viewport and permanently
+   hidden. Capping the whole hero box (not just the image) to
+   min(100vw,177.8vh) and centering it keeps the full composition
+   visible without cropping or stretching: when height is the tighter
+   constraint, the box - and every hotspot/canvas positioned as a %
+   of it - shrinks and recentres together, so nothing needs separate
+   realignment. At a normal desktop aspect ratio 100vw stays smaller
+   and this is a no-op (unchanged from before). Supersedes the old
+   ultrawide-only rule below, which only resized the image and left
+   hotspots/nav misaligned. */
+@media (min-width:901px) and (max-aspect-ratio:20/9){
+body{
+  background:#fff;
+}
+.hero-desktop{
+  width:min(100vw,177.8vh);
+  margin:0 auto;
+}
+}
+
 .hero-art{
   width:100%;
   height:auto;
