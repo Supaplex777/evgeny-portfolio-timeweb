@@ -381,3 +381,46 @@ test('a draft (published:false) project is hidden from anonymous requests but vi
   const ownerDetail = await request2(`/api/projects/${BASE_PROJECT.id}`, { origin: null, cookie });
   assert.equal(ownerDetail.status, 200);
 });
+
+// 18-20. description/goal/result preserve structural line breaks (paragraphs,
+// "## heading" lines, "- list item" lines) across POST, GET and PATCH, which
+// renderRich() on the client depends on to render headings/lists/paragraphs.
+test('description/goal/result preserve structural line breaks across POST, GET and PATCH', async () => {
+  const cookie = await login2();
+  const multiline = 'Абзац 1.\n\n## Возможности\n\n- пункт 1\n- пункт 2';
+  const id = '3fa85f64-5717-4562-b3fc-2c963f66afc0';
+  const createForm = projectForm({ id, description: multiline, goal: 'Строка 1\nСтрока 2', result: 'Результат 1\nРезультат 2' });
+  const created = await (await request2('/api/projects', { method: 'POST', cookie, body: createForm })).json();
+  assert.equal(created.description, multiline);
+  assert.equal(created.goal, 'Строка 1\nСтрока 2');
+  assert.equal(created.result, 'Результат 1\nРезультат 2');
+
+  // GET /api/projects/:id returns the exact same structural line breaks
+  const fetched = await (await request2(`/api/projects/${id}`, { origin: null })).json();
+  assert.equal(fetched.description, multiline);
+  assert.equal(fetched.goal, 'Строка 1\nСтрока 2');
+  assert.equal(fetched.result, 'Результат 1\nРезультат 2');
+
+  // PATCH description preserves (and can extend) the line breaks
+  const updatedMultiline = multiline + '\n\n## Ещё раздел\n\n- пункт 3';
+  const patchForm = new FormData();
+  patchForm.append('description', updatedMultiline);
+  const patched = await (await request2(`/api/projects/${id}`, { method: 'PATCH', cookie, body: patchForm })).json();
+  assert.equal(patched.description, updatedMultiline);
+  assert.equal(patched.goal, 'Строка 1\nСтрока 2', 'goal untouched by a description-only PATCH keeps its line breaks');
+});
+
+// 21. control characters (NUL etc.) are still stripped/normalized in multiline fields
+test('cleanMultilineText still strips control characters and normalizes CRLF/CR to \\n', async () => {
+  const cookie = await login2();
+  const dirty = 'Строка1\r\nСтрока2\rСтрока3\u0000\u0007 с хвостом\tзапрещённых\u007F символов';
+  const id = '3fa85f64-5717-4562-b3fc-2c963f66afc2';
+  const form = projectForm({ id, description: dirty });
+  const created = await (await request2('/api/projects', { method: 'POST', cookie, body: form })).json();
+  assert.equal(created.description.includes('\r'), false);
+  assert.equal(created.description.includes('\u0000'), false);
+  assert.equal(created.description.includes('\u0007'), false);
+  assert.equal(created.description.includes('\t'), false);
+  assert.equal(created.description.includes('\u007F'), false);
+  assert.equal(created.description, 'Строка1\nСтрока2\nСтрока3   с хвостом запрещённых  символов');
+});
