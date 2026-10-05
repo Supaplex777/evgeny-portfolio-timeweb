@@ -33,7 +33,7 @@
 .btn.primary{background:linear-gradient(135deg,#0e5c97,#1586d8);color:white;border-color:transparent;box-shadow:0 12px 30px rgba(21,134,216,.22)}
 .btn.primary:hover,.btn.primary:focus-visible{box-shadow:0 18px 38px rgba(21,134,216,.32)}
 footer{padding:26px 24px;background:#091524;color:#b8c6d5}.footer-inner{display:flex;justify-content:space-between}.footer-inner a{text-decoration:none}
-@media(max-width:900px){.hero-desktop{display:none}.hero-mobile{display:block;background:#fff}.mobile-topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;position:sticky;top:0;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);z-index:10;border-bottom:1px solid #e5edf4}.brand{display:flex;gap:10px;align-items:center;text-decoration:none}.brand-mark{font-size:1.8rem;font-weight:800}.brand strong,.brand small{display:block}.brand small{font-size:.7rem;color:#61758a}.menu-toggle{font-size:1.4rem;border:0;background:transparent}.mobile-nav{display:none;position:sticky;top:65px;z-index:9;background:#fff;padding:10px 18px;border-bottom:1px solid #e5edf4}.mobile-nav.open{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.mobile-nav a{text-decoration:none;padding:9px}.mobile-visual{aspect-ratio:16/9;overflow:hidden}.mobile-visual img{width:100%;height:100%;object-fit:cover;object-position:61% center}.mobile-copy{padding:28px 18px 34px}.eyebrow{font-size:.75rem;letter-spacing:.2em;color:#5b7996}.mobile-copy h1{font-size:clamp(2.4rem,9vw,4.2rem);line-height:.98;letter-spacing:-.055em;margin:.2em 0}.mobile-copy h1 span{color:var(--blue)}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.section{padding:68px 18px}.split,.timeline,.projects-grid,.skill-groups,.cert-grid{grid-template-columns:1fr}.contact-card{flex-direction:column;align-items:flex-start}.contact-actions{width:100%}.contact-actions .btn{flex:1}.section h2{font-size:2.35rem}}
+@media(max-width:900px){.hero-desktop{display:none}.hero-mobile{display:block;background:#fff}.mobile-topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;padding-top:max(16px,env(safe-area-inset-top));position:sticky;top:0;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);z-index:10;border-bottom:1px solid #e5edf4}.brand{display:flex;gap:10px;align-items:center;text-decoration:none}.brand-mark{font-size:1.8rem;font-weight:800}.brand strong,.brand small{display:block}.brand small{font-size:.7rem;color:#61758a}.menu-toggle{width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;font-size:1.4rem;border:0;border-radius:10px;background:transparent}.mobile-nav{display:none;position:sticky;top:var(--mobile-topbar-h,65px);z-index:9;background:#fff;padding:10px 18px;border-bottom:1px solid #e5edf4;max-height:70vh;overflow-y:auto}.mobile-nav.open{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.mobile-nav a{text-decoration:none;padding:9px;min-height:44px;display:flex;align-items:center}.mobile-visual{aspect-ratio:16/9;overflow:hidden}.mobile-visual img{width:100%;height:100%;object-fit:cover;object-position:61% center}.mobile-copy{padding:28px 18px 34px}.eyebrow{font-size:.75rem;letter-spacing:.2em;color:#5b7996}.mobile-copy h1{font-size:clamp(2.4rem,9vw,4.2rem);line-height:.98;letter-spacing:-.055em;margin:.2em 0}.mobile-copy h1 span{color:var(--blue)}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.section{padding:68px 18px}.split,.timeline,.projects-grid,.skill-groups,.cert-grid{grid-template-columns:1fr}.contact-card{flex-direction:column;align-items:flex-start}.contact-actions{width:100%}.contact-actions .btn{flex:1}.section h2{font-size:2.35rem}}
 
 
 /* Skill chips: tactile glass, no blur over the text */
@@ -68,8 +68,12 @@ footer{padding:26px 24px;background:#091524;color:#b8c6d5}.footer-inner{display:
 /* Mobile real buttons get the same premium feel */
 .btn{transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s ease,border-color .28s ease,filter .28s ease!important}
 .btn::before{display:none!important}
-.btn:hover,.btn:focus-visible{transform:translateY(-2px) scale(1.01);filter:brightness(1.015);box-shadow:0 12px 28px rgba(21,86,143,.16)!important;outline:none}
-.btn.primary:hover,.btn.primary:focus-visible{box-shadow:0 15px 32px rgba(21,134,216,.28)!important}
+.btn:focus-visible{transform:translateY(-2px) scale(1.01);filter:brightness(1.015);box-shadow:0 12px 28px rgba(21,86,143,.16)!important;outline:none}
+.btn.primary:focus-visible{box-shadow:0 15px 32px rgba(21,134,216,.28)!important}
+@media(hover:hover) and (pointer:fine){
+  .btn:hover{transform:translateY(-2px) scale(1.01);filter:brightness(1.015);box-shadow:0 12px 28px rgba(21,86,143,.16)!important;outline:none}
+  .btn.primary:hover{box-shadow:0 15px 32px rgba(21,134,216,.28)!important}
+}
 .btn:active{transform:translateY(0) scale(.975);transition-duration:.08s;box-shadow:0 4px 10px rgba(21,86,143,.12)!important}
 
 /* Desktop hero CTAs: real glass/premium buttons instead of bare text
@@ -246,7 +250,12 @@ body{
 /* === Legal compliance layer RF v25 (does not affect animations) === */
 .legal-footer{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:50;font-size:11px;color:rgba(255,255,255,.78);display:flex;gap:12px;white-space:nowrap;background:rgba(10,20,35,.32);backdrop-filter:blur(6px);padding:5px 12px;border-radius:14px;letter-spacing:.01em}
 .legal-footer a{text-decoration:none;color:inherit}
-.legal-page{display:none}
+@media(max-width:900px){.legal-footer{position:static;left:auto;bottom:auto;transform:none;white-space:normal;flex-direction:column;align-items:center;text-align:center;gap:6px;width:100%;border-radius:0;padding:16px 18px;margin-top:0}.legal-footer a{min-height:44px;display:inline-flex;align-items:center;justify-content:center}}
+.legal-page{display:none;position:fixed;inset:0;overflow-y:auto;z-index:11000;background:radial-gradient(ellipse at 90% 50%,#15334a,#080f18 75%);color:#eef6fb;font-family:Arial,Helvetica,sans-serif;padding:clamp(24px,6vw,64px) clamp(20px,6vw,120px) 64px}
+.legal-page:target{display:block}
+.legal-page .legal-back{display:inline-flex;align-items:center;gap:8px;min-height:44px;color:#72d1ff;text-decoration:none;font-weight:700;margin-bottom:24px}
+.legal-page h2{font-size:clamp(24px,4vw,40px);margin:0 0 .6em;max-width:760px}
+.legal-page p{font-size:16px;line-height:1.7;color:#c1d3df;max-width:760px}
 
 </style>
 
@@ -564,6 +573,23 @@ html.about-open #about .about-space-stage::before,html.about-open #about .about-
 @media(max-width:1100px){#about .about-intro{left:4%;top:6%;max-width:320px}#about .about-orbit-live{left:36%;width:59%}#about .node-path{left:65%;top:17%}#about .node-values{left:43%;top:35%}#about .node-goals{left:86%;top:35%}#about .node-life{left:65%;top:51%}#about .values-grid,#about .goals-roadmap{grid-template-columns:repeat(2,minmax(0,1fr))}#about .goals-roadmap::before,#about .goal-arrow{display:none}#about .path-layout{grid-template-columns:1fr .8fr}}
 @media(max-width:700px){#about .about-intro{left:6%;right:6%;top:4%;max-width:none}#about .about-intro h1{font-size:38px}#about .about-orbit-live{left:8%;top:21%;width:84%;height:42%}#about .about-node-hit{width:105px;height:112px}#about .about-node-core{width:64px;height:64px}#about .about-node-core svg{width:34px;height:34px}#about .about-node-label{font-size:14px}#about .about-node-sub{font-size:11px}#about .node-path{left:50%;top:30%}#about .node-values{left:22%;top:44%}#about .node-goals{left:78%;top:44%}#about .node-life{left:50%;top:58%}#about .about-detail-panel{max-height:50%}#about .about-panel-inner{padding:20px 16px}#about .path-layout,#about .values-grid,#about .goals-roadmap,#about .life-grid{grid-template-columns:1fr}#about .path-visual{display:none}#about .life-copy{width:72%}#about .goal-step{min-height:115px}#about .value-card{min-height:115px}}
 @media(prefers-reduced-motion:reduce){#about .about-node-core{animation:none!important}}
+/* Mobile/tablet-portrait fix: the unconditional #about.about-interactive rule above
+   (position:fixed;height:100dvh;min-height:0;overflow:hidden) clips any content taller
+   than one screen with no way to scroll to it, and .about-live-main kept its ≤1100px
+   left:240px desktop offset even once the sidebar itself goes full-width at ≤900px.
+   This block (last in source, so it wins on tied specificity) restores a tall,
+   normal-flow, scrollable stage so every node and the detail panel stay reachable,
+   without touching the orbit/node percentage layout or any animation. */
+@media(max-width:900px){
+ #about.about-interactive{overflow-y:auto;-webkit-overflow-scrolling:touch}
+ #about .about-live-main{position:relative;left:auto;right:auto;inset:auto;height:1100px;margin:0!important}
+ #about .about-detail-panel{max-height:none;overflow-y:auto;-webkit-overflow-scrolling:touch}
+ /* .about-detail-panel has contain:layout, which (like transform) gives
+    position:fixed descendants a containing block scoped to the panel's own
+    box, so the close button stays pinned there instead of scrolling away
+    with the now-scrollable panel content. */
+ #about .about-panel-close{position:fixed;width:44px;height:44px;line-height:40px}
+}
 </style>
 
 </head>
@@ -726,12 +752,27 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 <script>
   const toggle=document.querySelector('.menu-toggle');
   const nav=document.querySelector('.mobile-nav');
+  const topbar=document.querySelector('.mobile-topbar');
+  function closeMobileNav(){
+    nav.classList.remove('open');
+    toggle.setAttribute('aria-expanded','false');
+    toggle.textContent='☰';
+    toggle.setAttribute('aria-label','Открыть меню');
+  }
   if(toggle&&nav){
+    if(topbar){
+      const syncTopbarHeight=()=>document.documentElement.style.setProperty('--mobile-topbar-h',topbar.getBoundingClientRect().height+'px');
+      syncTopbarHeight();
+      window.addEventListener('resize',syncTopbarHeight);
+      window.addEventListener('orientationchange',syncTopbarHeight);
+    }
     toggle.addEventListener('click',()=>{
       const open=nav.classList.toggle('open');
       toggle.setAttribute('aria-expanded',String(open));
       toggle.textContent=open?'✕':'☰';
+      toggle.setAttribute('aria-label',open?'Закрыть меню':'Открыть меню');
     });
+    nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',closeMobileNav));
   }
 
   // Sections below the hero are intentionally not built yet.
@@ -747,6 +788,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
   // === Monitor AI Command Center v18 ===
   // Uses the browser Canvas API only: no external SDK, API key or network request.
   // The baked dashboard remains visible underneath; canvas adds live data motion.
+  const prefersReducedMotion=()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const monitorZone=document.querySelector('.monitor-zone');
   const monitorCanvas=document.getElementById('monitor-ai-canvas');
   if(monitorZone && monitorCanvas){
@@ -780,7 +822,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
     function drawFrame(ts){
       if(document.hidden||(location.hash&&location.hash!=='#home'&&location.hash!=='#top')){state.raf=0;return}
       const w=monitorCanvas.clientWidth,h=monitorCanvas.clientHeight;
-      if(!w||!h){state.raf=requestAnimationFrame(drawFrame);return}
+      if(!w||!h){state.raf=0;return}
       const t=(ts-state.start)/1000;
       ctx.clearRect(0,0,w,h);
 
@@ -877,7 +919,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
     monitorZone.addEventListener('click',activateMonitor);
     monitorZone.addEventListener('mouseleave',idleMonitor);
     monitorZone.addEventListener('blur',idleMonitor);
-    const syncMonitorAnimation=()=>{cancelAnimationFrame(state.raf);state.raf=0;if(!document.hidden&&(!location.hash||location.hash==='#home'||location.hash==='#top'))state.raf=requestAnimationFrame(drawFrame)};
+    const syncMonitorAnimation=()=>{cancelAnimationFrame(state.raf);state.raf=0;if(!document.hidden&&!prefersReducedMotion()&&(!location.hash||location.hash==='#home'||location.hash==='#top'))state.raf=requestAnimationFrame(drawFrame)};
     document.addEventListener('visibilitychange',syncMonitorAnimation);
     window.addEventListener('hashchange',syncMonitorAnimation);
     syncMonitorAnimation();
@@ -936,7 +978,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
     function drawSpace(ts){
       if(document.hidden||(location.hash&&location.hash!=='#home'&&location.hash!=='#top')){sState.raf=0;return}
       const w=spaceCanvas.clientWidth,h=spaceCanvas.clientHeight;
-      if(!w||!h){sState.raf=requestAnimationFrame(drawSpace);return}
+      if(!w||!h){sState.raf=0;return}
       const t=(ts-sState.start)/1000;
       sctx.clearRect(0,0,w,h);
 
@@ -1026,7 +1068,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 
     resizeSpaceCanvas();
     window.addEventListener('resize',resizeSpaceCanvas,{passive:true});
-    const syncSpaceAnimation=()=>{cancelAnimationFrame(sState.raf);sState.raf=0;if(!document.hidden&&(!location.hash||location.hash==='#home'||location.hash==='#top'))sState.raf=requestAnimationFrame(drawSpace)};
+    const syncSpaceAnimation=()=>{cancelAnimationFrame(sState.raf);sState.raf=0;if(!document.hidden&&!prefersReducedMotion()&&(!location.hash||location.hash==='#home'||location.hash==='#top'))sState.raf=requestAnimationFrame(drawSpace)};
     document.addEventListener('visibilitychange',syncSpaceAnimation);
     window.addEventListener('hashchange',syncSpaceAnimation);
     syncSpaceAnimation();
@@ -1074,7 +1116,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
     function drawSteam(ts){
       if(document.hidden||(location.hash&&location.hash!=='#home'&&location.hash!=='#top')){steamState.raf=0;return}
       const w=steamCanvas.clientWidth,h=steamCanvas.clientHeight;
-      if(!w||!h){steamState.raf=requestAnimationFrame(drawSteam);return}
+      if(!w||!h){steamState.raf=0;return}
       const t=(ts-steamState.start)/1000;
       stctx.clearRect(0,0,w,h);
 
@@ -1140,11 +1182,32 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 
     resizeSteamCanvas();
     window.addEventListener('resize',resizeSteamCanvas,{passive:true});
-    const syncSteamAnimation=()=>{cancelAnimationFrame(steamState.raf);steamState.raf=0;if(!document.hidden&&(!location.hash||location.hash==='#home'||location.hash==='#top'))steamState.raf=requestAnimationFrame(drawSteam)};
+    const syncSteamAnimation=()=>{cancelAnimationFrame(steamState.raf);steamState.raf=0;if(!document.hidden&&!prefersReducedMotion()&&(!location.hash||location.hash==='#home'||location.hash==='#top'))steamState.raf=requestAnimationFrame(drawSteam)};
     document.addEventListener('visibilitychange',syncSteamAnimation);
     window.addEventListener('hashchange',syncSteamAnimation);
     syncSteamAnimation();
   }
+
+  // These three decorative canvases stop their rAF loop on a zero-size
+  // read (e.g. hidden by the ≤900px mobile CSS) instead of busy-looping, so
+  // an IntersectionObserver is needed to restart them if the element becomes
+  // visible again later (resize to desktop width, orientation change).
+  if('IntersectionObserver' in window){
+    const resumeOnVisible=(el,sync)=>{
+      if(!el||typeof sync!=='function')return;
+      new IntersectionObserver((entries)=>{if(entries[0].isIntersecting)sync()},{threshold:0}).observe(el);
+    };
+    resumeOnVisible(monitorCanvas,typeof syncMonitorAnimation==='function'?syncMonitorAnimation:null);
+    resumeOnVisible(spaceCanvas,typeof syncSpaceAnimation==='function'?syncSpaceAnimation:null);
+    resumeOnVisible(steamCanvas,typeof syncSteamAnimation==='function'?syncSteamAnimation:null);
+  }
+  // Stop/start all three immediately if the OS-level reduced-motion
+  // preference changes while the page is already open.
+  window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener?.('change',()=>{
+    if(typeof syncMonitorAnimation==='function')syncMonitorAnimation();
+    if(typeof syncSpaceAnimation==='function')syncSpaceAnimation();
+    if(typeof syncSteamAnimation==='function')syncSteamAnimation();
+  });
 
   </script>
 
@@ -1159,6 +1222,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 </footer>
 
 <section class="legal-page" id="privacy">
+<a class="legal-back" href="#top">← На главную</a>
 <h2>Политика обработки персональных данных</h2>
 <p>Настоящая политика определяет порядок обработки персональных данных посетителей личного профессионального портфолио Евгения Смирнова в соответствии с законодательством Российской Федерации, включая Федеральный закон №152-ФЗ «О персональных данных».</p>
 <p>Сайт носит информационно-представительский характер и не является интернет-магазином или сервисом приема заказов.</p>
@@ -1167,10 +1231,12 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 <p>Оператор персональных данных: Евгений Смирнов. Контакт для связи: cmrrus@rambler.ru.</p>
 </section>
 <section class="legal-page" id="cookies">
+<a class="legal-back" href="#top">← На главную</a>
 <h2>Использование файлов Cookie</h2>
 <p>В текущей версии сайта используются только технические механизмы, необходимые для корректного отображения и работы страницы. Аналитические и рекламные сервисы не подключены.</p>
 </section>
 <section class="legal-page" id="consent">
+<a class="legal-back" href="#top">← На главную</a>
 <h2>Согласие на обработку персональных данных</h2>
 <p>При добровольном обращении пользователь предоставляет свои данные с целью получения ответа. Предоставление данных является добровольным.</p>
 </section>
@@ -1204,7 +1270,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 
 <section id="certificates-page">
   <main class="desktop-scene" aria-label="Страница сертификатов">
-    <img src="assets/certificates-space.webp" alt="Макет страницы сертификатов" />
+    <img src="assets/certificates-space.webp" alt="Макет страницы сертификатов" loading="lazy" />
 
     <div class="cert-visual-ui" aria-hidden="true">
       <aside class="cert-sidebar-visual">
@@ -1453,7 +1519,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 .cert-upload-inline:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgba(18,111,191,.30)}
 .cert-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding-bottom:10px}
 .cert-item{display:grid;grid-template-columns:minmax(168px,42%) minmax(0,1fr);gap:17px;align-items:center;min-height:164px;padding:14px;border:1px solid rgba(255,255,255,.15);border-radius:19px;background:linear-gradient(135deg,rgba(70,65,62,.94),rgba(82,69,61,.92) 56%,rgba(64,61,59,.94));-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 12px 28px rgba(0,0,0,.16);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;transform:translateZ(0);contain:paint}
-.cert-item:hover{transform:translateY(-1px) translateZ(0);border-color:rgba(130,198,246,.28);box-shadow:0 16px 34px rgba(0,0,0,.20)}
+@media(hover:hover) and (pointer:fine){.cert-item:hover{transform:translateY(-1px) translateZ(0);border-color:rgba(130,198,246,.28);box-shadow:0 16px 34px rgba(0,0,0,.20)}}
 .cert-thumb{position:relative;width:100%;aspect-ratio:1.414/1;min-height:118px;max-height:146px;border-radius:13px;overflow:hidden;background:#f2f4f6;display:grid;place-items:center;color:#6597bd;font-weight:900;font-size:12px;border:1px solid rgba(255,255,255,.13);box-shadow:inset 0 0 0 1px rgba(15,36,54,.06),0 7px 18px rgba(0,0,0,.12)}
 .cert-thumb img{width:100%;height:100%;object-fit:contain;object-position:center;display:block;background:#fff}
 .cert-thumb iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;pointer-events:none}
@@ -1545,7 +1611,8 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 .clean-mobile-panel{min-height:220px}
 .categories-mobile{display:grid;gap:12px}
 .mobile-cert-category{width:100%;text-align:left;border:1px solid rgba(18,53,84,.08);background:#fff;border-radius:18px;padding:16px 18px;cursor:pointer;box-shadow:0 10px 26px rgba(15,49,79,.06);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
-.mobile-cert-category:hover,.mobile-cert-category:focus-visible{transform:translateY(-1px);box-shadow:0 14px 30px rgba(15,49,79,.09);border-color:rgba(22,120,211,.22);outline:none}
+.mobile-cert-category:focus-visible{transform:translateY(-1px);box-shadow:0 14px 30px rgba(15,49,79,.09);border-color:rgba(22,120,211,.22);outline:none}
+@media(hover:hover) and (pointer:fine){.mobile-cert-category:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgba(15,49,79,.09);border-color:rgba(22,120,211,.22);outline:none}}
 .mobile-cert-category.is-active{border-color:rgba(22,120,211,.55);box-shadow:0 0 0 2px rgba(22,120,211,.12),0 14px 30px rgba(15,49,79,.10)}
 .mobile-cert-category .cat-meta{margin-top:6px;color:#6e8298}
 #mobile-cert-panel[hidden]{display:none!important}
@@ -1557,9 +1624,36 @@ html.skills-open,body.skills-open{overflow:hidden!important}
 .mobile-cert-empty[hidden]{display:none!important}
 .mobile-cert-empty strong{color:#112039}
 .mobile-cert-empty span{font-size:14px}
+/* #certificates-page itself has a dark background (#0d1724) with no explicit
+   text color, so .mobile-page content was inheriting the (dark) body text
+   color -- effectively invisible. These rules give the mobile page its own
+   readable light palette, normal padding, and >=44px nav touch targets,
+   without touching the desktop scene (scoped under .mobile-page). */
+#certificates-page .mobile-page{color:#eef3f8}
+#certificates-page .mobile-card{box-sizing:border-box;max-width:640px;margin:0 auto;padding:20px 16px 56px}
+#certificates-page .mobile-top{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+#certificates-page .mobile-top a{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center;padding:8px 14px;border-radius:12px;background:rgba(255,255,255,.07);color:#dbe8f2;text-decoration:none;font-size:13px;font-weight:700}
+#certificates-page .mobile-top a.current{background:rgba(70,160,230,.32);color:#fff}
+#certificates-page .mobile-page h1{color:#fff;font-size:clamp(28px,8vw,40px);margin:4px 0 10px}
+#certificates-page .mobile-page .lead{color:#b7cbdc}
+#certificates-page .mobile-cert-head h2{color:#fff}
+#certificates-page .mobile-cert-head p{color:#a7bfd1}
+#certificates-page .mobile-cert-empty{color:#cfe0ec;background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14)}
+#certificates-page .mobile-cert-empty strong{color:#fff}
+#certificates-page .mobile-cert-category .cat-title,#certificates-page .mobile-cert-category .cat-meta{font-family:inherit}
+#certificates-page .mobile-cert-list .cert-item-actions button{min-height:44px;padding:10px 14px}
 @media(max-width:900px){
   #certificates-page .desktop-scene{display:none!important}
   .cert-upload-dialog{padding:28px 20px;border-radius:22px}
+  .cert-rotate-btn{min-height:44px}
+}
+@media(max-width:720px){
+  /* On mobile .cert-details-dialog itself becomes the scroll container (see the
+     ≤720 override near .cert-details-content below), so the close button --
+     position:absolute relative to that same scrolling element -- used to scroll
+     out of reach. .cert-details-dialog keeps transform/contain, so position:fixed
+     here still pins the button to the dialog's own box, not the document. */
+  .cert-details-close{position:fixed}
 }
 @media(min-width:901px){#certificates-page .mobile-page{display:none!important}}
 @media(max-width:1200px) and (min-width:901px){
@@ -1569,8 +1663,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
   .cert-thumb{width:96px;height:78px}
 }
 </style>
-<!-- v57 cloud documents: certificates backend at /api/certificates (Timeweb S3). The Projects section below also moved to our own backend (/api/projects, same Timeweb S3 bucket) and no longer uses this SDK; it is left loaded only because removing the tag itself needs separate confirmation. Existing visual/animation code is untouched. -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- v57 cloud documents: certificates backend at /api/certificates (Timeweb S3); Projects also moved to our own backend (/api/projects, same Timeweb S3 bucket). The Supabase SDK <script> tag that used to load here is gone: confirmed unused anywhere in public/ (no window.supabase/createClient/db.from(/db.storage/db.auth/signInWithPassword/portfolio_projects references), and it was a synchronous, render-blocking external load with no defer/async. -->
 <!-- Pure rotation math for the certificate upload preview, served same-origin (no CDN, works without VPN). -->
 <script src="/certificates-rotate.js"></script>
 <script>
@@ -2784,7 +2877,7 @@ body.certificates-open{
   transform:translateZ(0);
 }
 </style>
-<script>(function(){function sync(){const open=['#about','#projects','#contacts'].includes(location.hash);document.documentElement.classList.toggle('portfolio-info-open',open);document.body.classList.toggle('portfolio-info-open',open);}window.addEventListener('hashchange',sync);window.addEventListener('pageshow',sync);sync();})();</script>
+<script>(function(){function sync(){const open=['#about','#projects','#contacts','#privacy','#cookies','#consent'].includes(location.hash);document.documentElement.classList.toggle('portfolio-info-open',open);document.body.classList.toggle('portfolio-info-open',open);}window.addEventListener('hashchange',sync);window.addEventListener('pageshow',sync);sync();})();</script>
 <style id="v41-consistent-page-scale">
 /* Use the certificate page's viewport-based geometry. */
 @media(min-width:901px){
@@ -2804,6 +2897,20 @@ body.certificates-open{
 .portfolio-sidebar nav svg{width:1.2vw;height:1.22vw}
 .portfolio-sidebar nav a.current{border-color:transparent;background:linear-gradient(90deg,rgba(38,132,199,.42),rgba(67,124,164,.34));box-shadow:inset 0 0 0 1px rgba(117,197,249,.10),0 9px 22px rgba(8,26,40,.15)}
 .portfolio-info main{margin-left:15.15vw}
+}
+/* Tablet landscape (901-1199px, e.g. iPad landscape at 1024px): the vw-scaled
+   sidebar text/links above were tuned for real desktop widths (>=1200px) and
+   become unreadable/too-short-to-tap here (~.82vw is under 9px, nav links
+   ~28px tall). Fixed px values restore legibility and >=44px touch targets
+   without changing the sidebar's own width or touching >=1200px desktop. */
+@media(min-width:901px) and (max-width:1199px){
+.portfolio-brand{left:16px;top:16px}
+.portfolio-brand strong{font-size:14px}
+.portfolio-brand small{font-size:11px}
+.portfolio-sidebar::after{left:16px;right:16px;top:56px}
+.portfolio-sidebar nav a{left:16px;width:calc(100% - 32px);height:44px;min-height:44px;font-size:14px}
+.portfolio-sidebar nav a:nth-child(1){top:64px}.portfolio-sidebar nav a:nth-child(2){top:116px}.portfolio-sidebar nav a:nth-child(3){top:168px}.portfolio-sidebar nav a:nth-child(4){top:220px}.portfolio-sidebar nav a:nth-child(5){top:272px}.portfolio-sidebar nav a:nth-child(6){top:324px}
+.portfolio-sidebar nav svg{width:16px;height:16px}
 }
 @media(min-width:701px) and (max-width:900px){
 #skills .portfolio-sidebar,.portfolio-info .portfolio-sidebar{position:relative;width:100%;padding:16px;border-radius:0}
@@ -2980,6 +3087,10 @@ new ResizeObserver(fit).observe(art);art.addEventListener('load',fit);window.add
 @media(max-width:900px){#skills .skill-detail{position:relative!important;max-height:none!important;overflow:visible!important}}
 </style><style id="v53-cosmos-layer">
 @media(min-width:901px){#skills .skills-scene{isolation:isolate}#skills .skills-art{position:relative;z-index:0}#skills .cosmos-v53{position:absolute;z-index:2;pointer-events:none;mix-blend-mode:screen;opacity:.92}#skills .skill-panels{z-index:4!important}#skills .portfolio-sidebar{z-index:5!important}}
+/* Below 901px .cosmos-v53 has no position:absolute, so without this it renders
+   as a stray in-flow, art-sized canvas block under the skill cards (it is
+   appended as the last child of .skills-scene by the script below). */
+@media(max-width:900px){#skills .cosmos-v53{display:none}}
 </style><script id="cosmos-v53-script">
 (function(){
 const page=document.getElementById('skills'),scene=page&&page.querySelector('.skills-scene'),art=page&&page.querySelector('.skills-art');if(!scene||!art)return;
@@ -2992,9 +3103,9 @@ function draw(){const sx=c.width/W,sy=c.height/H;ctx.setTransform(sx,0,0,sy,0,0)
 for(let i=0;i<4;i++){const x=640+i*210+Math.sin(t*.09+i)*70,y=235+Math.cos(t*.055+i)*45;const g=ctx.createRadialGradient(x,y,0,x,y,180);g.addColorStop(0,'rgba(38,150,255,.17)');g.addColorStop(.55,'rgba(28,91,180,.055)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.fillRect(x-190,y-190,380,380);}
 for(const s of stars){const x=555+((s.x-555+t*s.v*4)%970),y=s.y+Math.sin(t*.45+s.p)*4;if(!inSky(x,y))continue;const a=s.a*(.65+.35*Math.sin(t*s.v+s.p));ctx.fillStyle='rgba(171,226,255,'+a+')';ctx.beginPath();ctx.arc(x,y,s.r,0,Math.PI*2);ctx.fill();if(s.r>1.15){ctx.fillStyle='rgba(90,186,255,'+(a*.16)+')';ctx.beginPath();ctx.arc(x,y,s.r*4,0,Math.PI*2);ctx.fill();}}
 if(Math.random()<.004)meteors.push({x:620,y:175+Math.random()*130,life:0});for(const m of meteors){m.life+=.035;const x=m.x+m.life*270,y=m.y+m.life*110;const g=ctx.createLinearGradient(x-85,y-34,x,y);g.addColorStop(0,'rgba(100,196,255,0)');g.addColorStop(1,'rgba(221,249,255,'+(1-m.life)+')');ctx.strokeStyle=g;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x-85,y-34);ctx.lineTo(x,y);ctx.stroke();}meteors=meteors.filter(m=>m.life<1);ctx.restore();}
-function frame(ts){if(document.hidden)return; if(!last)last=ts;const dt=Math.min(ts-last,80);if(dt>20){t+=dt/1000;last=ts;draw();}raf=requestAnimationFrame(frame)}
-function sync(){cancelAnimationFrame(raf);last=0;fit();draw();if(!document.hidden)raf=requestAnimationFrame(frame)}
-new ResizeObserver(fit).observe(art);window.addEventListener('resize',fit);document.addEventListener('visibilitychange',sync);sync();
+function frame(ts){if(document.hidden||location.hash!=='#skills')return; if(!last)last=ts;const dt=Math.min(ts-last,80);if(dt>20){t+=dt/1000;last=ts;draw();}raf=requestAnimationFrame(frame)}
+function sync(){cancelAnimationFrame(raf);last=0;fit();draw();if(!document.hidden&&location.hash==='#skills'&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches)raf=requestAnimationFrame(frame)}
+new ResizeObserver(fit).observe(art);window.addEventListener('resize',fit);document.addEventListener('visibilitychange',sync);window.addEventListener('hashchange',sync);sync();
 })();
 </script>
 <style id="evg-ai-widget-style">
@@ -3005,32 +3116,32 @@ new ResizeObserver(fit).observe(art);window.addEventListener('resize',fit);docum
   color:#fff;font:700 14px/1.1 "Segoe UI",Arial,sans-serif;
   box-shadow:0 14px 36px rgba(13,91,158,.28);cursor:pointer;
 }
-#evg-ai-launch:hover{transform:translateY(-2px);box-shadow:0 18px 42px rgba(13,91,158,.34)}
+@media(hover:hover) and (pointer:fine){#evg-ai-launch:hover{transform:translateY(-2px);box-shadow:0 18px 42px rgba(13,91,158,.34)}}
 #evg-ai-panel{
   position:fixed;right:22px;bottom:80px;z-index:99981;width:min(390px,calc(100vw - 28px));
-  max-height:min(640px,calc(100vh - 110px));display:none;flex-direction:column;
+  max-height:min(640px,calc(100dvh - 110px));display:none;flex-direction:column;
   background:rgba(250,253,255,.985);color:#10233a;border:1px solid rgba(43,111,168,.20);
   border-radius:22px;box-shadow:0 26px 70px rgba(10,35,61,.28);
   overflow:hidden;font-family:"Segoe UI",Arial,sans-serif;
 }
 #evg-ai-panel.open{display:flex}
-.evg-ai-head{display:flex;align-items:center;justify-content:space-between;padding:16px 17px;border-bottom:1px solid #dce8f2}
+.evg-ai-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:16px 17px;border-bottom:1px solid #dce8f2}
 .evg-ai-head strong{font-size:16px}.evg-ai-head small{display:block;color:#6b8094;font-size:11px;margin-top:2px}
-#evg-ai-close{border:0;background:transparent;font-size:24px;cursor:pointer;color:#48657f}
-#evg-ai-log{padding:14px;overflow:auto;display:flex;flex-direction:column;gap:10px;min-height:210px}
+#evg-ai-close{flex:0 0 auto;width:36px;height:36px;border:0;background:transparent;font-size:24px;cursor:pointer;color:#48657f}
+#evg-ai-log{flex:1 1 auto;min-height:0;padding:14px;overflow:auto;display:flex;flex-direction:column;gap:10px}
 .evg-msg{max-width:88%;padding:10px 12px;border-radius:15px;font-size:13px;line-height:1.45;white-space:pre-wrap}
 .evg-msg.ai{align-self:flex-start;background:#edf5fb;border:1px solid #d9e8f4}
 .evg-msg.user{align-self:flex-end;background:#1678d3;color:#fff}
 .evg-msg.error{align-self:flex-start;background:#fff0f0;border:1px solid #f2caca;color:#8a2525}
-.evg-ai-form{padding:12px;border-top:1px solid #dce8f2;background:#fff}
-#evg-ai-input{width:100%;min-height:72px;max-height:140px;resize:vertical;border:1px solid #cbdbe8;border-radius:13px;padding:10px 11px;font:13px/1.4 "Segoe UI",Arial,sans-serif;outline:none}
+.evg-ai-form{flex:0 0 auto;padding:12px;border-top:1px solid #dce8f2;background:#fff}
+#evg-ai-input{width:100%;min-height:72px;max-height:140px;resize:vertical;border:1px solid #cbdbe8;border-radius:13px;padding:10px 11px;font:16px/1.4 "Segoe UI",Arial,sans-serif;outline:none}
 #evg-ai-input:focus{border-color:#5ca9e7;box-shadow:0 0 0 3px rgba(53,151,228,.12)}
 .evg-ai-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:9px}
 .evg-ai-note{font-size:10px;color:#71879a}
-#evg-ai-send{border:0;border-radius:12px;padding:10px 15px;background:#1678d3;color:white;font-weight:700;cursor:pointer}
+#evg-ai-send{min-height:44px;border:0;border-radius:12px;padding:10px 15px;background:#1678d3;color:white;font-weight:700;cursor:pointer}
 #evg-ai-send:disabled{opacity:.55;cursor:wait}
 @media(max-width:600px){
-  #evg-ai-launch{right:14px;bottom:14px}
+  #evg-ai-launch{right:14px;bottom:max(14px,env(safe-area-inset-bottom))}
   #evg-ai-panel{right:14px;bottom:70px}
 }
 </style>
@@ -3064,10 +3175,23 @@ new ResizeObserver(fit).observe(art);window.addEventListener('resize',fit);docum
   const send=document.getElementById('evg-ai-send');
   let used=0;
 
+  // Keep the panel above the on-screen keyboard: mobile browsers shrink the
+  // visual viewport (not always 100dvh) when the keyboard opens, so without
+  // this the fixed-position panel/textarea can end up hidden behind it.
+  const vv=window.visualViewport;
+  function syncToKeyboard(){
+    if(!panel.classList.contains('open'))return;
+    const keyboardInset=vv?Math.max(0,window.innerHeight-vv.height-vv.offsetTop):0;
+    const baseBottom=window.matchMedia('(max-width:600px)').matches?70:80;
+    panel.style.bottom=(baseBottom+keyboardInset)+'px';
+    panel.style.maxHeight='min(640px, calc(100dvh - 110px - '+keyboardInset+'px))';
+  }
+  if(vv){vv.addEventListener('resize',syncToKeyboard);vv.addEventListener('scroll',syncToKeyboard)}
   function toggle(open){
     panel.classList.toggle('open',open);
     launch.setAttribute('aria-expanded',String(open));
-    if(open)setTimeout(()=>input.focus(),60);
+    if(open){syncToKeyboard();setTimeout(()=>{input.focus();syncToKeyboard()},60)}
+    else{panel.style.bottom='';panel.style.maxHeight=''}
   }
   function msg(role,text){
     const d=document.createElement('div');
@@ -3206,12 +3330,14 @@ new ResizeObserver(fit).observe(art);window.addEventListener('resize',fit);docum
 <style id="projects-contacts-styles">
 #projects,#contacts{background:#050b12 center/cover no-repeat}#projects{background-image:linear-gradient(90deg,rgba(2,8,14,.96) 0 15%,rgba(2,9,16,.34) 45%,rgba(2,8,14,.72)),url('assets/projects-command-center.webp')}#contacts{background-image:linear-gradient(90deg,rgba(2,8,14,.96) 0 18%,rgba(2,9,16,.2) 65%,rgba(2,8,14,.58)),url('assets/contacts-office.webp')}
 #projects main,#contacts main{box-sizing:border-box;max-width:none;min-height:100dvh;margin-left:282px;padding:7vh 5vw 5vh;color:#eef8ff}.showcase-heading h1{margin:0;font-size:clamp(48px,5vw,76px);line-height:.96}.showcase-heading strong{display:block;margin-top:12px;color:#d8efff;font-size:clamp(19px,1.8vw,28px)}.showcase-heading p{margin:6px 0 0!important;color:#a9c9df!important;font-size:clamp(15px,1.2vw,20px)!important;line-height:1.4!important}
-.project-filters{display:flex;gap:12px;margin:24px 0}.project-filters button{min-width:78px;padding:10px 21px;border:1px solid #39aeee;border-radius:24px;background:rgba(3,17,29,.7);color:#e9f7ff;cursor:pointer}.project-filters button.is-active,.project-filters button:hover{background:#087bd0;box-shadow:0 0 18px #139eff}
+.project-filters{display:flex;gap:12px;margin:24px 0}.project-filters button{min-width:78px;min-height:44px;padding:10px 21px;border:1px solid #39aeee;border-radius:24px;background:rgba(3,17,29,.7);color:#e9f7ff;cursor:pointer}.project-filters button.is-active{background:#087bd0;box-shadow:0 0 18px #139eff}
+@media(hover:hover) and (pointer:fine){.project-filters button:hover{background:#087bd0;box-shadow:0 0 18px #139eff}}
 .project-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;max-width:1160px}.project-card,.project-add{min-height:420px;padding:18px;border:1px solid #21b3ff;border-radius:20px;background:linear-gradient(150deg,rgba(6,31,52,.94),rgba(3,15,27,.9));box-shadow:0 16px 45px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.08);backdrop-filter:blur(9px)}.project-card img{width:100%;aspect-ratio:16/7;object-fit:cover;object-position:center;border:1px solid #27baff;border-radius:13px}.project-card h2{margin:14px 0 5px;font-size:31px}.project-card p{margin:0!important;font-size:16px!important;line-height:1.45!important}.project-tags{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0}.project-tags span{padding:5px 11px;border:1px solid rgba(74,191,255,.55);border-radius:15px;color:#d4efff;font-size:12px}.project-actions{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}.project-actions button,.project-actions a,.neon-button{flex:1;min-width:110px;padding:12px 18px;border:1px solid #48c3ff;border-radius:13px;background:rgba(3,20,34,.78);color:white;text-align:center;text-decoration:none;cursor:pointer}.project-actions .primary,.neon-button{background:linear-gradient(180deg,#148fe7,#0965bf);box-shadow:0 0 18px rgba(23,164,255,.65)}.project-add{display:grid;place-content:center;text-align:center;border-style:dashed}.project-add button{width:74px;height:74px;margin:auto;border:2px dashed #3ec1ff;border-radius:50%;background:transparent;color:white;font-size:42px;cursor:pointer}.project-quote{margin-top:25px!important;color:#b9d7e9!important;font-size:15px!important}.project-gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}.project-gallery img{aspect-ratio:16/10;object-fit:cover;border-radius:9px}.form-check{display:flex!important;align-items:center;gap:10px!important}.form-check input{width:auto!important}.admin-note{color:#8bd8ff!important;font-size:13px!important}
-.glass-dialog{width:min(1040px,calc(100% - 32px));max-height:88dvh;box-sizing:border-box;overflow:auto;padding:34px;border:1px solid #2fb7ff;border-radius:22px;background:rgba(3,18,31,.94);color:#eff9ff;box-shadow:0 0 42px rgba(0,155,255,.34);backdrop-filter:blur(22px)}.glass-dialog::backdrop{background:rgba(0,5,10,.72);backdrop-filter:blur(5px)}.dialog-close{position:absolute;right:18px;top:14px;border:0;background:transparent;color:#c9e9ff;font-size:34px;cursor:pointer}.project-detail-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:30px;align-items:center}.project-detail-grid img{width:100%;border:1px solid #2bb9ff;border-radius:16px}.project-detail-grid h2,.glass-dialog h2{font-size:clamp(30px,4vw,48px);margin:0 0 10px}.project-detail-grid h3{margin:18px 0 6px;font-size:19px;color:#6fd3ff}.project-detail-grid ul{margin:0 0 12px;padding-left:20px}.project-detail-grid ul li{margin-bottom:4px}.glass-dialog form{display:grid;gap:13px}.glass-dialog label{display:grid;gap:6px;color:#e8f5ff}.glass-dialog input,.glass-dialog textarea,.glass-dialog select{box-sizing:border-box;width:100%;padding:12px;border:1px solid #37698e;border-radius:10px;background:rgba(4,18,31,.76);color:white;font:inherit}.glass-dialog textarea{min-height:92px;resize:vertical}.form-status{margin:0!important;font-size:14px!important}.form-trap{position:absolute!important;left:-10000px!important}
-.contacts-main{display:grid;align-content:center}.contacts-main .showcase-heading h1{font-family:Georgia,serif;font-weight:500;font-size:clamp(58px,6vw,94px)}.contact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,320px));gap:15px;margin:36px 0 24px}.contact-grid>a,.contact-cta{display:flex;align-items:center;gap:15px;min-height:74px;padding:14px 18px;border:1px solid rgba(91,151,197,.45);border-radius:15px;background:linear-gradient(120deg,rgba(7,22,37,.9),rgba(9,28,48,.62));color:#eff8ff;text-decoration:none;backdrop-filter:blur(14px);transition:.25s}.contact-grid>a:hover{transform:translateY(-3px);border-color:#34baff;box-shadow:0 10px 26px rgba(0,126,211,.22)}.contact-icon{display:grid;place-items:center;flex:0 0 49px;height:49px;border-radius:14px;background:linear-gradient(145deg,#174273,#0a203f);color:#74d3ff;font-weight:800;font-style:normal}.contact-grid b,.contact-cta b{display:block;font-size:17px}.contact-grid small,.contact-cta small{display:block;margin-top:6px;color:#bcd0df}.contact-grid i{margin-left:auto;font-size:29px;font-style:normal}.contact-cta{max-width:625px}.contact-cta .neon-button{margin-left:auto;flex:0 0 auto}.telegram-fallback{display:block;padding:11px;text-align:center;color:#7ed8ff}.contact-dialog{width:min(570px,calc(100% - 28px))}
+.glass-dialog{width:min(1040px,calc(100% - 32px));max-height:88dvh;box-sizing:border-box;overflow:auto;overscroll-behavior:contain;padding:34px;border:1px solid #2fb7ff;border-radius:22px;background:rgba(3,18,31,.94);color:#eff9ff;box-shadow:0 0 42px rgba(0,155,255,.34);backdrop-filter:blur(22px);transform:translateZ(0)}.glass-dialog::backdrop{background:rgba(0,5,10,.72);backdrop-filter:blur(5px)}.dialog-close{position:fixed;right:18px;top:14px;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:rgba(3,18,31,.55);color:#c9e9ff;font-size:28px;line-height:1;cursor:pointer}.project-detail-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:30px;align-items:center}.project-detail-grid img{width:100%;border:1px solid #2bb9ff;border-radius:16px}.project-detail-grid h2,.glass-dialog h2{font-size:clamp(30px,4vw,48px);margin:0 0 10px}.project-detail-grid h3{margin:18px 0 6px;font-size:19px;color:#6fd3ff}.project-detail-grid ul{margin:0 0 12px;padding-left:20px}.project-detail-grid ul li{margin-bottom:4px}.glass-dialog form{display:grid;gap:13px}.glass-dialog label{display:grid;gap:6px;color:#e8f5ff}.glass-dialog input,.glass-dialog textarea,.glass-dialog select{box-sizing:border-box;width:100%;padding:12px;border:1px solid #37698e;border-radius:10px;background:rgba(4,18,31,.76);color:white;font:inherit}.glass-dialog textarea{min-height:92px;resize:vertical}.form-status{margin:0!important;font-size:14px!important}.form-trap{position:absolute!important;left:-10000px!important}
+.contacts-main{display:grid;align-content:center}.contacts-main .showcase-heading h1{font-family:Georgia,serif;font-weight:500;font-size:clamp(58px,6vw,94px)}.contact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,320px));gap:15px;margin:36px 0 24px}.contact-grid>a,.contact-cta{display:flex;align-items:center;gap:15px;min-height:74px;padding:14px 18px;border:1px solid rgba(91,151,197,.45);border-radius:15px;background:linear-gradient(120deg,rgba(7,22,37,.9),rgba(9,28,48,.62));color:#eff8ff;text-decoration:none;backdrop-filter:blur(14px);transition:.25s}.contact-icon{display:grid;place-items:center;flex:0 0 49px;height:49px;border-radius:14px;background:linear-gradient(145deg,#174273,#0a203f);color:#74d3ff;font-weight:800;font-style:normal}.contact-grid b,.contact-cta b{display:block;font-size:17px}.contact-grid small,.contact-cta small{display:block;margin-top:6px;color:#bcd0df}.contact-grid i{margin-left:auto;font-size:29px;font-style:normal}.contact-cta{max-width:625px}.contact-cta .neon-button{margin-left:auto;flex:0 0 auto}.telegram-fallback{display:block;padding:11px;text-align:center;color:#7ed8ff}.contact-dialog{width:min(570px,calc(100% - 28px))}
+@media(hover:hover) and (pointer:fine){.contact-grid>a:hover{transform:translateY(-3px);border-color:#34baff;box-shadow:0 10px 26px rgba(0,126,211,.22)}}
 @media(min-width:1700px){#projects main,#contacts main{padding-left:clamp(70px,7vw,150px)}.project-grid{max-width:1500px;grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:900px){#projects main,#contacts main{margin-left:0;padding:24px 18px 54px}.project-grid,.contact-grid,.project-detail-grid{grid-template-columns:1fr}.project-card,.project-add{min-height:auto}.project-filters{max-width:100%;overflow-x:auto;padding-bottom:4px}.project-filters button{flex:0 0 auto}.contact-cta{align-items:flex-start;flex-wrap:wrap}.contact-cta .neon-button{width:100%;margin:5px 0 0}.showcase-page .portfolio-sidebar{position:relative!important;display:block!important;width:100%!important;height:auto!important;padding:12px 16px!important;border-radius:0!important}.showcase-page .portfolio-brand{display:none}.showcase-page .portfolio-sidebar nav{display:flex!important;margin:0!important;overflow-x:auto;gap:6px}.showcase-page .portfolio-sidebar nav a{flex:0 0 auto;min-height:42px;padding:0 12px;font-size:13px}.project-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){#projects main,#contacts main{margin-left:0;padding:24px 18px 54px}#contacts main{padding-bottom:96px}.project-grid,.contact-grid,.project-detail-grid{grid-template-columns:1fr}.project-card,.project-add{min-height:auto}.project-filters{max-width:100%;overflow-x:auto;padding-bottom:4px}.project-filters button{flex:0 0 auto}.contact-cta{align-items:flex-start;flex-wrap:wrap}.contact-cta .neon-button{width:100%;max-width:calc(100% - 130px);margin:5px 0 0}.showcase-page .portfolio-sidebar{position:relative!important;display:block!important;width:100%!important;height:auto!important;padding:12px 16px!important;border-radius:0!important}.showcase-page .portfolio-brand{display:none}.showcase-page .portfolio-sidebar nav{display:flex!important;margin:0!important;overflow-x:auto;gap:6px}.showcase-page .portfolio-sidebar nav a{flex:0 0 auto;min-height:42px;padding:0 12px;font-size:13px}.project-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.showcase-heading h1,.contacts-main .showcase-heading h1{font-size:42px}.project-card{padding:13px}.project-card h2{font-size:25px}.glass-dialog{padding:24px 16px}.project-actions>*{width:100%;flex-basis:100%}}
 @media(prefers-reduced-motion:reduce){.contact-grid>a{transition:none}.project-filters button{scroll-behavior:auto}}
 </style>
@@ -3248,7 +3374,14 @@ new ResizeObserver(fit).observe(art);window.addEventListener('resize',fit);docum
  projectPage.classList.add('showcase-page');contactPage.classList.add('showcase-page');
  const projectMain=projectPage.querySelector('main'); projectMain.className='projects-main';projectMain.innerHTML=`<header class="showcase-heading"><h1>Проекты</h1><strong>Реальные решения. Измеримые результаты.</strong><p>AI, автоматизация и данные в действии.</p></header><div class="project-filters" role="group" aria-label="Фильтр проектов"><button class="is-active" data-filter="all">Все</button><button data-filter="ai">AI</button><button data-filter="automation">Автоматизация</button><button data-filter="web">Web</button><button data-filter="data">Data</button></div><div class="project-grid" aria-live="polite"></div><p class="project-quote">«Создаю решения, которые работают в реальном мире.»</p>`;
  const contactMain=contactPage.querySelector('main');contactMain.className='contacts-main';contactMain.innerHTML=`<header class="showcase-heading"><h1>Контакты</h1><p>Готов обсудить ваш проект<br>и варианты сотрудничества.</p></header><div class="contact-grid"><a href="https://t.me/SupaplexEVG" target="_blank" rel="noopener noreferrer"><span class="contact-icon">✈</span><span><b>Telegram</b><small>@SupaplexEVG</small></span><i>›</i></a><a href="mailto:cmrrus@rambler.ru"><span class="contact-icon">✉</span><span><b>Email</b><small>cmrrus@rambler.ru</small></span><i>›</i></a><a href="https://github.com/Supaplex777" target="_blank" rel="noopener noreferrer"><span class="contact-icon">GH</span><span><b>GitHub</b><small>github.com/Supaplex777</small></span><i>›</i></a><a href="https://kwork.ru/user/supaplexevg" target="_blank" rel="noopener noreferrer"><span class="contact-icon">K</span><span><b>Kwork</b><small>kwork.ru/user/supaplexevg</small></span><i>›</i></a></div><div class="contact-cta"><span class="contact-icon">▣</span><span><b>Открыт к проектам</b><small>AI-автоматизация, интеграции и умные решения.</small></span><button class="neon-button" type="button">Обсудить проект →</button></div>`;
- function dialog(cls,html){const d=document.createElement('dialog');d.className='glass-dialog '+cls;d.innerHTML='<button class="dialog-close" type="button" aria-label="Закрыть">×</button>'+html;d.querySelector('.dialog-close').onclick=()=>d.close();d.addEventListener('click',e=>{if(e.target===d)d.close()});document.body.append(d);return d}
+ function dialog(cls,html){const d=document.createElement('dialog');d.className='glass-dialog '+cls;d.innerHTML='<button class="dialog-close" type="button" aria-label="Закрыть">×</button>'+html;d.querySelector('.dialog-close').onclick=()=>d.close();d.addEventListener('click',e=>{
+  if(e.target!==d)return;
+  // e.target===d also fires when tapping the dialog's own padding (not just the
+  // true ::backdrop area), which used to close the form and lose typed input.
+  const r=d.getBoundingClientRect();
+  const insideDialog=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;
+  if(!insideDialog)d.close();
+});document.body.append(d);return d}
  const detail=dialog('project-dialog','<div class="project-dialog-body"></div>'); const editor=dialog('project-editor-dialog',`<form><h2>Проект</h2><p class="admin-note">Редактор доступен только авторизованному владельцу.</p><input type="hidden" name="id"><input type="hidden" name="cover_path"><label>Название<input name="title" maxlength="100" required></label><label>Категория<select name="category"><option value="ai">AI</option><option value="automation">Автоматизация</option><option value="web">Web</option><option value="data">Data</option><option value="other">Другое</option></select></label><label>Краткое описание<textarea name="summary" maxlength="280" required></textarea></label><label>Полное описание<textarea name="description" maxlength="3000"></textarea></label><label>Цель<textarea name="goal" maxlength="1000"></textarea></label><label>Результат<textarea name="result" maxlength="1000"></textarea></label><label>Статус<select name="status"><option>В разработке</option><option>MVP</option><option>Завершён</option><option>Активный</option></select></label><label>Стек, через запятую<input name="tags" maxlength="500"></label><label>Обложка PNG/JPG/WebP<input name="cover" type="file" accept="image/webp,image/jpeg,image/png"></label><label>Дополнительные изображения (до 8)<input name="gallery" type="file" accept="image/webp,image/jpeg,image/png" multiple></label><label>Ссылка на проект<input name="project_url" type="url"></label><label>GitHub<input name="github_url" type="url"></label><label>Демо<input name="demo_url" type="url"></label><label class="form-check"><input name="published" type="checkbox" checked><span>Опубликовать проект</span></label><button class="neon-button" type="submit">Сохранить</button><p class="form-status" role="status"></p></form>`); const contact=dialog('contact-dialog',`<form><h2>Обсудить проект</h2><p>Расскажите кратко о задаче, и я свяжусь с вами.</p><label>Имя<input name="name" maxlength="80" required placeholder="Ваше имя"></label><label>Telegram / Email<input name="contact" maxlength="160" required placeholder="@username или email@example.com"></label><label>Тип проекта<select name="project_type"><option>AI-автоматизация</option><option>Интеграция</option><option>Аналитика данных</option><option>Web-проект</option><option>Другое</option></select></label><label>Описание задачи<textarea name="message" maxlength="2000" required placeholder="Расскажите о вашем проекте..."></textarea></label><label class="form-trap" aria-hidden="true">Компания<input name="company" tabindex="-1" autocomplete="off"></label><button class="neon-button" type="submit">Отправить заявку →</button><a class="telegram-fallback" href="https://t.me/SupaplexEVG" target="_blank" rel="noopener noreferrer">Написать в Telegram</a><p class="form-status" role="status"></p></form>`);
  contactMain.querySelector('button').onclick=()=>contact.showModal();
  const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));function renderRich(text){const blocks=String(text||'').split(/\n{2,}/).map(b=>b.trim()).filter(Boolean);return blocks.map(block=>{const lines=block.split('\n').map(l=>l.trim()).filter(Boolean);if(lines.length&&lines.every(l=>l.startsWith('- ')))return '<ul>'+lines.map(l=>'<li>'+esc(l.slice(2))+'</li>').join('')+'</ul>';if(lines.length===1&&lines[0].startsWith('## '))return '<h3>'+esc(lines[0].slice(3))+'</h3>';return '<p>'+lines.map(l=>esc(l)).join('<br>')+'</p>'}).join('')}let projects=[fallback,resellflow],filter='all';
