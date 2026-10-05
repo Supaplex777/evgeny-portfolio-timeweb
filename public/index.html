@@ -1569,7 +1569,7 @@ html.skills-open,body.skills-open{overflow:hidden!important}
   .cert-thumb{width:96px;height:78px}
 }
 </style>
-<!-- v57 cloud documents: certificates backend at /api/certificates (Timeweb S3). Supabase SDK stays loaded for the Projects section below. Existing visual/animation code is untouched. -->
+<!-- v57 cloud documents: certificates backend at /api/certificates (Timeweb S3). The Projects section below also moved to our own backend (/api/projects, same Timeweb S3 bucket) and no longer uses this SDK; it is left loaded only because removing the tag itself needs separate confirmation. Existing visual/animation code is untouched. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- Pure rotation math for the certificate upload preview, served same-origin (no CDN, works without VPN). -->
 <script src="/certificates-rotate.js"></script>
@@ -3217,13 +3217,32 @@ new ResizeObserver(fit).observe(art);window.addEventListener('resize',fit);docum
 </style>
 <script id="projects-contacts-script">
 (()=>{
- const SB_URL='https://rhzxaaaszbuwrjgucrev.supabase.co',SB_KEY='sb_publishable_V2h_WY-l64ymLw8-u3jL5w_RNbLnLSf',ADMIN=new URLSearchParams(location.search).get('admin')==='1';
- const db=window.__portfolioSupabase||window.supabase?.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+ const ADMIN=new URLSearchParams(location.search).get('admin')==='1';
+ /* Projects are served by our own backend (/api/projects/*), which stores
+    metadata + WebP media in Timeweb Cloud S3. Owner writes reuse the same
+    server-verified session as the certificates section (requireProjectsOwner()
+    below calls the very same /api/certificates/login + /session endpoints). */
+ async function apiJson(response){const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Запрос к серверу не удался.');return data}
+ async function requireProjectsOwner(){
+  if(!ADMIN)throw new Error('Режим владельца выключен.');
+  const sessionCheck=await fetch('/api/certificates/session',{credentials:'same-origin'}).catch(()=>null);
+  const session=sessionCheck&&sessionCheck.ok?await sessionCheck.json().catch(()=>null):null;
+  if(session&&session.authenticated)return true;
+  const password=prompt('Вход владельца сайта\nПароль:');
+  if(!password)throw new Error('Вход отменён.');
+  await apiJson(await fetch('/api/certificates/login',{
+   method:'POST',credentials:'same-origin',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({password})
+  }));
+  return true;
+ }
  const fallback={id:'terrain-intel',title:'TerraIntel',category:'ai',summary:'AI-платформа анализа геопространственных данных и генерации отчётов.',description:'TerraIntel — модульная AI-платформа, которая анализирует геопространственные данные, выявляет аномалии и автоматически формирует аналитические отчёты.',goal:'Автоматизировать анализ территорий и выявление аномалий.',result:'Сокращение времени анализа с дней до минут.',status:'В разработке (MVP)',tags:['Python','AI','SQL','API','Supabase','GeoPandas','Leaflet'],cover_url:'assets/terra-intel-cover.webp'};
- /* resellflow is a temporary client-side placeholder, not a real portfolio_projects
-    row. It auto-hides itself in load() below the moment a real Supabase row with
-    slug/title "resellflow" exists, so it can never show up twice once the owner
-    adds the project for real through the ?admin=1 editor form. */
+ /* resellflow is a temporary client-side placeholder, not a real /api/projects
+    record. It auto-hides itself in load() below the moment a real backend
+    project with slug/title "resellflow" exists, so it can never show up
+    twice once the owner adds the project for real through the ?admin=1 editor
+    form. */
  const resellflow={id:'resellflow',title:'ResellFlow',category:'automation',summary:'Система автоматизации продаж цифровых товаров: синхронизация маркетплейса и поставщика, сопоставление каталога, расчёт экономики, обработка заказов и защищённый AUTO LIVE.',description:'ResellFlow — backend-система автоматизации перепродажи цифровых товаров. Проект связывает маркетплейс GGSEL и поставщика FoxReload, синхронизирует каталог, сопоставляет товары, рассчитывает экономику сделки и автоматически обрабатывает заказы. Реализованы MULTI-карточки с несколькими номиналами, readiness-проверки, UID-маршрутизация, защита от повторных покупок, двухэтапная схема create→pay, polling/reconcile, лимиты цены и суммы заказа, контроль прибыли, резерв баланса и аварийный kill switch.',goal:'Автоматизировать рутинную работу продавца цифровых товаров и создать безопасную систему, которая сама получает заказ, определяет нужный вариант товара, проверяет экономику и выполняет закупку у поставщика только при выполнении всех защитных условий.',result:'Рабочая система развёрнута на VPS. Реализованы синхронизация GGSEL, интеграция с FoxReload, административная панель, MULTI-карточки, readiness, AUTO LIVE, polling, защита от дублей и почти 500 автоматических тестов. В рабочей карточке Free Fire CIS настроены варианты 110 и 231 Diamonds, оба переведены в LIVE.',status:'В разработке / Рабочий прототип',tags:['Node.js','TypeScript','JavaScript','Express','SQLite','REST API','GGSEL API','FoxReload API','Linux','VPS','systemd','Git','GitHub','Automation'],cover_url:'assets/resellflow-cover.webp'};
  const projectPage=document.querySelector('#projects'),contactPage=document.querySelector('#contacts'); if(!projectPage||!contactPage)return;
  projectPage.classList.add('showcase-page');contactPage.classList.add('showcase-page');
@@ -3232,17 +3251,70 @@ new ResizeObserver(fit).observe(art);window.addEventListener('resize',fit);docum
  function dialog(cls,html){const d=document.createElement('dialog');d.className='glass-dialog '+cls;d.innerHTML='<button class="dialog-close" type="button" aria-label="Закрыть">×</button>'+html;d.querySelector('.dialog-close').onclick=()=>d.close();d.addEventListener('click',e=>{if(e.target===d)d.close()});document.body.append(d);return d}
  const detail=dialog('project-dialog','<div class="project-dialog-body"></div>'); const editor=dialog('project-editor-dialog',`<form><h2>Проект</h2><p class="admin-note">Редактор доступен только авторизованному владельцу.</p><input type="hidden" name="id"><input type="hidden" name="cover_path"><label>Название<input name="title" maxlength="100" required></label><label>Категория<select name="category"><option value="ai">AI</option><option value="automation">Автоматизация</option><option value="web">Web</option><option value="data">Data</option><option value="other">Другое</option></select></label><label>Краткое описание<textarea name="summary" maxlength="280" required></textarea></label><label>Полное описание<textarea name="description" maxlength="3000"></textarea></label><label>Цель<textarea name="goal" maxlength="1000"></textarea></label><label>Результат<textarea name="result" maxlength="1000"></textarea></label><label>Статус<select name="status"><option>В разработке</option><option>MVP</option><option>Завершён</option><option>Активный</option></select></label><label>Стек, через запятую<input name="tags" maxlength="500"></label><label>Обложка PNG/JPG/WebP<input name="cover" type="file" accept="image/webp,image/jpeg,image/png"></label><label>Дополнительные изображения (до 8)<input name="gallery" type="file" accept="image/webp,image/jpeg,image/png" multiple></label><label>Ссылка на проект<input name="project_url" type="url"></label><label>GitHub<input name="github_url" type="url"></label><label>Демо<input name="demo_url" type="url"></label><label class="form-check"><input name="published" type="checkbox" checked><span>Опубликовать проект</span></label><button class="neon-button" type="submit">Сохранить</button><p class="form-status" role="status"></p></form>`); const contact=dialog('contact-dialog',`<form><h2>Обсудить проект</h2><p>Расскажите кратко о задаче, и я свяжусь с вами.</p><label>Имя<input name="name" maxlength="80" required placeholder="Ваше имя"></label><label>Telegram / Email<input name="contact" maxlength="160" required placeholder="@username или email@example.com"></label><label>Тип проекта<select name="project_type"><option>AI-автоматизация</option><option>Интеграция</option><option>Аналитика данных</option><option>Web-проект</option><option>Другое</option></select></label><label>Описание задачи<textarea name="message" maxlength="2000" required placeholder="Расскажите о вашем проекте..."></textarea></label><label class="form-trap" aria-hidden="true">Компания<input name="company" tabindex="-1" autocomplete="off"></label><button class="neon-button" type="submit">Отправить заявку →</button><a class="telegram-fallback" href="https://t.me/SupaplexEVG" target="_blank" rel="noopener noreferrer">Написать в Telegram</a><p class="form-status" role="status"></p></form>`);
  contactMain.querySelector('button').onclick=()=>contact.showModal();
- const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));function renderRich(text){const blocks=String(text||'').split(/\n{2,}/).map(b=>b.trim()).filter(Boolean);return blocks.map(block=>{const lines=block.split('\n').map(l=>l.trim()).filter(Boolean);if(lines.length&&lines.every(l=>l.startsWith('- ')))return '<ul>'+lines.map(l=>'<li>'+esc(l.slice(2))+'</li>').join('')+'</ul>';if(lines.length===1&&lines[0].startsWith('## '))return '<h3>'+esc(lines[0].slice(3))+'</h3>';return '<p>'+lines.map(l=>esc(l)).join('<br>')+'</p>'}).join('')}let projects=[fallback,resellflow],filter='all',user=null;
- function cover(p){if(p.cover_url)return p.cover_url;if(!p.cover_path)return 'assets/terra-intel-cover.webp';return `${SB_URL}/storage/v1/object/public/portfolio-projects/${p.cover_path}`}
- function render(){const grid=projectMain.querySelector('.project-grid'),items=projects.filter(p=>filter==='all'||p.category===filter);grid.innerHTML=items.map(p=>`<article class="project-card"><img src="${esc(cover(p))}" alt="Обложка проекта ${esc(p.title)}" loading="lazy"><h2>${esc(p.title)}</h2><p>${esc(p.summary)}</p><div class="project-tags">${(p.tags||[]).map(t=>`<span>${esc(t)}</span>`).join('')}</div><div class="project-actions"><button class="primary" data-open="${esc(p.id)}">Подробнее →</button>${p.project_url?`<a href="${esc(p.project_url)}" target="_blank" rel="noopener noreferrer">Кейс ↗</a>`:''}${ADMIN&&user&&p.id!=='terrain-intel'&&p.id!=='resellflow'?`<button data-edit="${esc(p.id)}">✎</button><button data-delete="${esc(p.id)}">×</button>`:''}</div></article>`).join('')+(ADMIN&&user?'<article class="project-add"><button type="button" aria-label="Добавить новый проект">+</button><h2>Добавить новый проект</h2><p>Доступно только владельцу.</p></article>':'');grid.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openProject(b.dataset.open));grid.querySelector('.project-add button')?.addEventListener('click',()=>openEditor());grid.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEditor(projects.find(p=>String(p.id)===b.dataset.edit)));grid.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>removeProject(b.dataset.delete));}
- async function openProject(id){const p=projects.find(x=>String(x.id)===id)||fallback;let images=[];if(db&&p.id!=='terrain-intel'&&p.id!=='resellflow'){const {data}=await db.from('portfolio_project_images').select('*').eq('project_id',p.id).order('sort_order');images=data||[]}const gallery=images.length?`<div class="project-gallery">${images.map(x=>`<img src="${esc(`${SB_URL}/storage/v1/object/public/portfolio-projects/${x.storage_path}`)}" alt="${esc(x.alt_text||p.title)}" loading="lazy">`).join('')}</div>`:'';detail.querySelector('.project-dialog-body').innerHTML=`<div class="project-detail-grid"><div><img src="${esc(cover(p))}" alt="${esc(p.title)}">${gallery}</div><div><h2>${esc(p.title)}</h2>${renderRich(p.description||p.summary)}<div class="project-tags">${(p.tags||[]).map(t=>`<span>${esc(t)}</span>`).join('')}</div>${p.goal?`<p><b>Цель:</b> ${esc(p.goal)}</p>`:''}${p.result?`<p><b>Результат:</b> ${esc(p.result)}</p>`:''}${p.status?`<p><b>Статус:</b> ${esc(p.status)}</p>`:''}<div class="project-actions">${p.project_url?`<a class="primary" href="${esc(p.project_url)}" target="_blank" rel="noopener noreferrer">Открыть проект</a>`:''}${p.github_url?`<a href="${esc(p.github_url)}" target="_blank" rel="noopener noreferrer">GitHub</a>`:''}${p.demo_url?`<a href="${esc(p.demo_url)}" target="_blank" rel="noopener noreferrer">Демо</a>`:''}</div></div></div>`;detail.showModal()}
+ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));function renderRich(text){const blocks=String(text||'').split(/\n{2,}/).map(b=>b.trim()).filter(Boolean);return blocks.map(block=>{const lines=block.split('\n').map(l=>l.trim()).filter(Boolean);if(lines.length&&lines.every(l=>l.startsWith('- ')))return '<ul>'+lines.map(l=>'<li>'+esc(l.slice(2))+'</li>').join('')+'</ul>';if(lines.length===1&&lines[0].startsWith('## '))return '<h3>'+esc(lines[0].slice(3))+'</h3>';return '<p>'+lines.map(l=>esc(l)).join('<br>')+'</p>'}).join('')}let projects=[fallback,resellflow],filter='all';
+ function cover(p){if(p.cover_url)return p.cover_url;return 'assets/terra-intel-cover.webp'}
+ function render(){const grid=projectMain.querySelector('.project-grid'),items=projects.filter(p=>filter==='all'||p.category===filter);grid.innerHTML=items.map(p=>`<article class="project-card"><img src="${esc(cover(p))}" alt="Обложка проекта ${esc(p.title)}" loading="lazy"><h2>${esc(p.title)}</h2><p>${esc(p.summary)}</p><div class="project-tags">${(p.tags||[]).map(t=>`<span>${esc(t)}</span>`).join('')}</div><div class="project-actions"><button class="primary" data-open="${esc(p.id)}">Подробнее →</button>${p.project_url?`<a href="${esc(p.project_url)}" target="_blank" rel="noopener noreferrer">Кейс ↗</a>`:''}${ADMIN&&p.id!=='terrain-intel'&&p.id!=='resellflow'?`<button data-edit="${esc(p.id)}">✎</button><button data-delete="${esc(p.id)}">×</button>`:''}</div></article>`).join('')+(ADMIN?'<article class="project-add"><button type="button" aria-label="Добавить новый проект">+</button><h2>Добавить новый проект</h2><p>Доступно только владельцу.</p></article>':'');grid.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openProject(b.dataset.open));grid.querySelector('.project-add button')?.addEventListener('click',()=>openEditor());grid.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEditor(projects.find(p=>String(p.id)===b.dataset.edit)));grid.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>removeProject(b.dataset.delete));}
+ async function openProject(id){const p=projects.find(x=>String(x.id)===id)||fallback;let images=[];if(p.id!=='terrain-intel'&&p.id!=='resellflow'){try{const row=await apiJson(await fetch('/api/projects/'+encodeURIComponent(p.id),{credentials:'same-origin'}));images=row.images||[]}catch(err){images=[]}}const gallery=images.length?`<div class="project-gallery">${images.map(x=>`<img src="${esc(x.url)}" alt="${esc(x.alt_text||p.title)}" loading="lazy">`).join('')}</div>`:'';detail.querySelector('.project-dialog-body').innerHTML=`<div class="project-detail-grid"><div><img src="${esc(cover(p))}" alt="${esc(p.title)}">${gallery}</div><div><h2>${esc(p.title)}</h2>${renderRich(p.description||p.summary)}<div class="project-tags">${(p.tags||[]).map(t=>`<span>${esc(t)}</span>`).join('')}</div>${p.goal?`<p><b>Цель:</b> ${esc(p.goal)}</p>`:''}${p.result?`<p><b>Результат:</b> ${esc(p.result)}</p>`:''}${p.status?`<p><b>Статус:</b> ${esc(p.status)}</p>`:''}<div class="project-actions">${p.project_url?`<a class="primary" href="${esc(p.project_url)}" target="_blank" rel="noopener noreferrer">Открыть проект</a>`:''}${p.github_url?`<a href="${esc(p.github_url)}" target="_blank" rel="noopener noreferrer">GitHub</a>`:''}${p.demo_url?`<a href="${esc(p.demo_url)}" target="_blank" rel="noopener noreferrer">Демо</a>`:''}</div></div></div>`;detail.showModal()}
  projectMain.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;projectMain.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('is-active',x===b));render()});
- function openEditor(p={}){const f=editor.querySelector('form');f.reset();for(const k of ['id','cover_path','title','category','summary','description','goal','result','status','project_url','github_url','demo_url'])if(f.elements[k])f.elements[k].value=p[k]||'';f.tags.value=(p.tags||[]).join(', ');f.published.checked=p.published!==false;f.querySelector('.form-status').textContent='';editor.showModal()}
+ function openEditor(p={}){const f=editor.querySelector('form');f.reset();for(const k of ['id','title','category','summary','description','goal','result','status','project_url','github_url','demo_url'])if(f.elements[k])f.elements[k].value=p[k]||'';f.tags.value=(p.tags||[]).join(', ');f.published.checked=p.published!==false;f.querySelector('.form-status').textContent='';editor.showModal()}
  async function webp(file){const bmp=await createImageBitmap(file),scale=Math.min(1,1600/bmp.width),c=document.createElement('canvas');c.width=Math.round(bmp.width*scale);c.height=Math.round(bmp.height*scale);c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);return new Promise(r=>c.toBlob(r,'image/webp',.82))}
- editor.querySelector('form').onsubmit=async e=>{e.preventDefault();if(!db||!user)return;const f=e.currentTarget,s=f.querySelector('.form-status'),btn=f.querySelector('button[type=submit]');btn.disabled=true;s.textContent='Сохраняю…';let coverPath=f.cover_path.value||null;try{const projectId=f.id.value||crypto.randomUUID(),file=f.cover.files[0];if(file){const blob=await webp(file);coverPath=`${user.id}/${projectId}/cover.webp`;const up=await db.storage.from('portfolio-projects').upload(coverPath,blob,{contentType:'image/webp',upsert:true});if(up.error)throw up.error}const row={id:projectId,title:f.title.value.trim(),slug:(f.title.value.trim().toLowerCase().replace(/[^a-zа-я0-9]+/gi,'-').replace(/^-|-$/g,'')||projectId),category:f.category.value,summary:f.summary.value.trim(),description:f.description.value.trim(),goal:f.goal.value.trim()||null,result:f.result.value.trim()||null,status:f.status.value||'MVP',tags:f.tags.value.split(',').map(x=>x.trim()).filter(Boolean),cover_path:coverPath,project_url:f.project_url.value||null,github_url:f.github_url.value||null,demo_url:f.demo_url.value||null,published:f.published.checked};const {error}=f.id.value?await db.from('portfolio_projects').update(row).eq('id',f.id.value):await db.from('portfolio_projects').insert(row);if(error)throw error;const gallery=[...f.gallery.files].slice(0,8);for(let i=0;i<gallery.length;i++){s.textContent=`Загружаю изображение ${i+1} из ${gallery.length}…`;const blob=await webp(gallery[i]),path=`${user.id}/${projectId}/gallery-${Date.now()}-${i}.webp`;const up=await db.storage.from('portfolio-projects').upload(path,blob,{contentType:'image/webp'});if(up.error)throw up.error;const ins=await db.from('portfolio_project_images').insert({project_id:projectId,storage_path:path,alt_text:`${row.title}: изображение ${i+1}`,sort_order:i});if(ins.error)throw ins.error}editor.close();await load()}catch(err){s.textContent='Ошибка: '+(err.message||'не удалось сохранить')}finally{btn.disabled=false}};
+ editor.querySelector('form').onsubmit=async e=>{
+  e.preventDefault();
+  const f=e.currentTarget,s=f.querySelector('.form-status'),btn=f.querySelector('button[type=submit]');
+  btn.disabled=true;s.textContent='Проверяю вход владельца…';
+  try{await requireProjectsOwner()}catch(err){s.textContent=err.message||'Вход владельца не выполнен.';btn.disabled=false;return}
+  s.textContent='Сохраняю…';
+  try{
+   const fd=new FormData();
+   if(!f.id.value)fd.append('id',crypto.randomUUID());
+   fd.append('title',f.title.value.trim());
+   fd.append('category',f.category.value);
+   fd.append('summary',f.summary.value.trim());
+   fd.append('description',f.description.value.trim());
+   fd.append('goal',f.goal.value.trim());
+   fd.append('result',f.result.value.trim());
+   fd.append('status',f.status.value||'MVP');
+   fd.append('tags',f.tags.value);
+   fd.append('project_url',f.project_url.value||'');
+   fd.append('github_url',f.github_url.value||'');
+   fd.append('demo_url',f.demo_url.value||'');
+   fd.append('published',f.published.checked?'true':'false');
+   const coverFile=f.cover.files[0];
+   if(coverFile){s.textContent='Конвертирую обложку…';fd.append('cover',await webp(coverFile),'cover.webp')}
+   s.textContent='Сохраняю проект…';
+   const saved=f.id.value
+    ?await apiJson(await fetch('/api/projects/'+encodeURIComponent(f.id.value),{method:'PATCH',credentials:'same-origin',body:fd}))
+    :await apiJson(await fetch('/api/projects',{method:'POST',credentials:'same-origin',body:fd}));
+   const galleryFiles=[...f.gallery.files].slice(0,8);
+   if(galleryFiles.length){
+    s.textContent='Загружаю изображения галереи…';
+    const galleryForm=new FormData();
+    for(const file of galleryFiles)galleryForm.append('gallery',await webp(file),'image.webp');
+    await apiJson(await fetch('/api/projects/'+encodeURIComponent(saved.id)+'/gallery',{method:'POST',credentials:'same-origin',body:galleryForm}));
+   }
+   editor.close();await load();
+  }catch(err){s.textContent='Ошибка: '+(err.message||'не удалось сохранить')}
+  finally{btn.disabled=false}
+ };
  editor.querySelector('form').addEventListener('submit',e=>{const f=e.currentTarget;if(!f.description.value.trim())f.description.value=f.summary.value.trim()},true);
- async function removeProject(id){if(!confirm('Удалить проект?'))return;const {error}=await db.from('portfolio_projects').delete().eq('id',id);if(error)alert(error.message);else await load()}
- async function load(){if(!db){render();return}if(ADMIN){const {data:{user:u}}=await db.auth.getUser();user=u}let q=db.from('portfolio_projects').select('*').order('sort_order');if(!(ADMIN&&user))q=q.eq('published',true);const {data}=await q;const base=data?.length?data:[fallback];const hasResellflow=base.some(p=>{const slug=String(p.slug||'').trim().toLowerCase(),title=String(p.title||'').trim().toLowerCase();return slug==='resellflow'||slug.startsWith('resellflow-')||title==='resellflow'||title.startsWith('resellflow ')||title.startsWith('resellflow —')||title.startsWith('resellflow -')});projects=hasResellflow?base:base.concat(resellflow);render()}load();
+ async function removeProject(id){
+  if(!confirm('Удалить проект?'))return;
+  try{
+   await requireProjectsOwner();
+   await apiJson(await fetch('/api/projects/'+encodeURIComponent(id),{method:'DELETE',credentials:'same-origin'}));
+   await load();
+  }catch(err){alert(err.message||'Не удалось удалить проект.')}
+ }
+ async function load(){
+  let data=[];
+  try{data=await apiJson(await fetch('/api/projects',{credentials:'same-origin'}))}
+  catch(err){console.warn('Projects API error:',err);data=[]}
+  const base=data.length?data:[fallback];
+  const hasResellflow=base.some(p=>{const slug=String(p.slug||'').trim().toLowerCase(),title=String(p.title||'').trim().toLowerCase();return slug==='resellflow'||slug.startsWith('resellflow-')||title==='resellflow'||title.startsWith('resellflow ')||title.startsWith('resellflow —')||title.startsWith('resellflow -')});
+  projects=hasResellflow?base:base.concat(resellflow);
+  render();
+ }
+ load();
  contact.querySelector('form').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget,s=f.querySelector('.form-status'),btn=f.querySelector('button[type=submit]');if(f.company.value)return;s.textContent='Отправляю…';btn.disabled=true;try{const response=await fetch('/api/contact',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value.trim(),contact:f.contact.value.trim(),project_type:f.project_type.value,message:f.message.value.trim(),company:f.company.value})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Не удалось отправить заявку.');s.textContent=data.emailSent?'Заявка отправлена. Спасибо!':'Заявка принята. Я свяжусь с вами в ближайшее время.';f.reset()}catch(error){s.textContent=error.message||'Не удалось отправить. Напишите в Telegram.'}finally{btn.disabled=false}};
 })();
 </script>
