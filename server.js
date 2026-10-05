@@ -4,6 +4,7 @@ const { rateLimit } = require('express-rate-limit');
 const path = require('path');
 const { createTerraIntelRouter, terraIntelPageHeaders } = require('./lib/terraintel');
 const { createCertificatesRouter, getCertificatesSummaryForAI, buildCertificatesContext } = require('./lib/certificates');
+const { createProjectsRouter } = require('./lib/projects');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -292,6 +293,9 @@ app.post('/api/ai', aiRateLimiter, async (req, res) => {
 app.use('/api/terraintel', createTerraIntelRouter());
 // Certificates backend (Timeweb Cloud S3). Must stay above the SPA fallback.
 app.use('/api/certificates', createCertificatesRouter());
+// Projects backend (same Timeweb Cloud S3 bucket, reuses the certificates
+// owner session). Must stay above the SPA fallback.
+app.use('/api/projects', createProjectsRouter());
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
