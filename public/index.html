@@ -3305,13 +3305,19 @@ new ResizeObserver(fit).observe(art);window.addEventListener('resize',fit);docum
    await load();
   }catch(err){alert(err.message||'Не удалось удалить проект.')}
  }
+ // TerraIntel and ResellFlow are two INDEPENDENT fallbacks: each one hides
+ // itself the moment a matching real /api/projects record exists, regardless
+ // of whether the other fallback is still needed or what else is in the
+ // backend. Neither depends on whether the backend is empty overall.
+ function isTerraIntelRecord(p){const slug=String(p.slug||'').trim().toLowerCase(),title=String(p.title||'').trim().toLowerCase();return slug==='terraintel'||slug==='terra-intel'||slug.startsWith('terraintel-')||title==='terraintel'||title==='terra intel'||title.startsWith('terraintel ')||title.startsWith('terraintel—')||title.startsWith('terraintel -')}
+ function isResellflowRecord(p){const slug=String(p.slug||'').trim().toLowerCase(),title=String(p.title||'').trim().toLowerCase();return slug==='resellflow'||slug.startsWith('resellflow-')||title==='resellflow'||title.startsWith('resellflow ')||title.startsWith('resellflow —')||title.startsWith('resellflow -')}
  async function load(){
-  let data=[];
-  try{data=await apiJson(await fetch('/api/projects',{credentials:'same-origin'}))}
-  catch(err){console.warn('Projects API error:',err);data=[]}
-  const base=data.length?data:[fallback];
-  const hasResellflow=base.some(p=>{const slug=String(p.slug||'').trim().toLowerCase(),title=String(p.title||'').trim().toLowerCase();return slug==='resellflow'||slug.startsWith('resellflow-')||title==='resellflow'||title.startsWith('resellflow ')||title.startsWith('resellflow —')||title.startsWith('resellflow -')});
-  projects=hasResellflow?base:base.concat(resellflow);
+  let realProjects=[];
+  try{realProjects=await apiJson(await fetch('/api/projects',{credentials:'same-origin'}))}
+  catch(err){console.warn('Projects API error:',err);realProjects=[]}
+  projects=realProjects.slice();
+  if(!realProjects.some(isTerraIntelRecord))projects.push(fallback);
+  if(!realProjects.some(isResellflowRecord))projects.push(resellflow);
   render();
  }
  load();
