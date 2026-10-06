@@ -3155,11 +3155,13 @@ new ResizeObserver(fit).observe(art);window.addEventListener('resize',fit);docum
 <style id="evg-ai-widget-style">
 #evg-ai-launch{
   position:fixed;right:22px;bottom:22px;z-index:99980;
+  display:flex;align-items:center;gap:7px;
   border:1px solid rgba(255,255,255,.28);border-radius:999px;
   padding:13px 18px;background:linear-gradient(135deg,#126fc9,#1993ee);
   color:#fff;font:700 14px/1.1 "Segoe UI",Arial,sans-serif;
   box-shadow:0 14px 36px rgba(13,91,158,.28);cursor:pointer;
 }
+.evg-ai-launch-icon{display:none;flex:0 0 auto;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 @media(hover:hover) and (pointer:fine){#evg-ai-launch:hover{transform:translateY(-2px);box-shadow:0 18px 42px rgba(13,91,158,.34)}}
 #evg-ai-panel{
   position:fixed;right:22px;bottom:80px;z-index:99981;width:min(390px,calc(100vw - 28px));
@@ -3188,9 +3190,24 @@ new ResizeObserver(fit).observe(art);window.addEventListener('resize',fit);docum
   #evg-ai-launch{right:14px;bottom:max(14px,env(safe-area-inset-bottom))}
   #evg-ai-panel{right:14px;bottom:70px}
 }
+/* On small phones the full "AI о Евгении" pill (≈150x46px, fixed
+   bottom-right) can sit directly over the Home feature cards' text at the
+   page's natural resting scroll position - there is no single scroll-
+   independent CSS fix for a viewport-fixed element vs scrolling content,
+   but shrinking the FAB to a compact icon-only circle here cuts its
+   footprint by roughly two thirds, which removes the overlap in practice
+   at the tested phone widths while staying fully tappable/accessible
+   (aria-label plus the visually-hidden label text below keep the
+   accessible name unchanged for assistive tech). Desktop/tablet (>480px)
+   keep the original pill unchanged. */
+@media(max-width:480px){
+  #evg-ai-launch{width:50px;height:50px;padding:0;justify-content:center;border-radius:50%;right:12px;bottom:max(12px,env(safe-area-inset-bottom))}
+  .evg-ai-launch-icon{display:block}
+  .evg-ai-launch-text{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+}
 </style>
 
-<button id="evg-ai-launch" type="button" aria-controls="evg-ai-panel" aria-expanded="false">AI о Евгении</button>
+<button id="evg-ai-launch" type="button" aria-controls="evg-ai-panel" aria-expanded="false" aria-label="AI о Евгении"><svg class="evg-ai-launch-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3a9 9 0 1 0 5.2 16.3L21 20l-.9-3.6A9 9 0 0 0 12 3Z"/><circle cx="8.5" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.5" cy="12" r="1.15" fill="currentColor" stroke="none"/></svg><span class="evg-ai-launch-text">AI о Евгении</span></button>
 <section id="evg-ai-panel" aria-label="AI-помощник по портфолио">
   <div class="evg-ai-head">
     <div><strong>AI-помощник работодателю</strong><small>GPT-OSS-20B • AI-помощник</small></div>
