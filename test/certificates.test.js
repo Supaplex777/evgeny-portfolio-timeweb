@@ -275,6 +275,42 @@ test('getCertificatesSummaryForAI({s3}) is never served from the module-level AI
   assert.equal(summaryB[0].name, 'Second Catalog Cert');
 });
 
+test('create/update/delete each invalidate the AI-context cache so the next read is never stale', async () => {
+  // Uses getCertificatesSummaryForAI({s3, useCache: true}) - the same cache
+  // the real (no-options) production call uses - against this test's own
+  // fakeS3, so the fill/invalidate/refetch behaviour is exercised for real,
+  // not just asserted never to engage (that's the test above this one).
+  // Uses request2/login2 (a second router instance, same fakeS3, its own
+  // independent rate-limiter store - see the comment above server2) so this
+  // doesn't eat into the shared login() budget other tests in this file rely on.
+  const cookie = await login2();
+
+  const createForm = new FormData();
+  createForm.append('id', '3fa85f64-5717-4562-b3fc-2c963f66afc1');
+  createForm.append('category', 'ai');
+  createForm.append('name', 'cache-test.pdf');
+  createForm.append('file', new Blob([Buffer.from('%PDF-1.4 fake')], { type: 'application/pdf' }), 'cache-test.pdf');
+  const created = await (await request2('/api/certificates', { method: 'POST', cookie, body: createForm })).json();
+
+  const afterCreate = await certificates.getCertificatesSummaryForAI({ s3: fakeS3, useCache: true });
+  assert.equal(afterCreate.length, 1);
+  assert.equal(afterCreate[0].name, 'cache-test.pdf', 'first call (cold cache) must reflect the just-created certificate');
+
+  const titleForm = new FormData();
+  titleForm.append('category', 'ai');
+  titleForm.append('title', 'Updated Title After Cache Fill');
+  await request2(`/api/certificates/${created.id}`, { method: 'PATCH', cookie, body: titleForm });
+
+  const afterUpdate = await certificates.getCertificatesSummaryForAI({ s3: fakeS3, useCache: true });
+  assert.equal(afterUpdate.length, 1);
+  assert.equal(afterUpdate[0].name, 'Updated Title After Cache Fill', 'PATCH must invalidate the cache - without it this would still read the pre-update name from the first call');
+
+  await request2(`/api/certificates/${created.id}`, { method: 'DELETE', cookie });
+
+  const afterDelete = await certificates.getCertificatesSummaryForAI({ s3: fakeS3, useCache: true });
+  assert.equal(afterDelete.length, 0, 'DELETE must invalidate the cache - without it this would still return the deleted certificate');
+});
+
 test('PATCH on a well-formed but non-existent id returns 404, not 500, on an empty bucket', async () => {
   const cookie = await login();
   const form = new FormData();
