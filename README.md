@@ -111,6 +111,10 @@ TERRAINTEL_TIMEOUT_MS   # таймаут запроса к Polza, по умол�
 - «PDF» — печать через браузер (`window.print`), отдельного PDF-генератора нет.
 - MapTiler key используется в браузере: в кабинете MapTiler должны быть заданы разрешённые домены.
 
+## Project handoff
+
+[Полный handoff проекта](docs/PROJECT_HANDOFF.md) — архитектура, модули, маршруты, env, production, тесты и правила разработки для нового агента/разработчика.
+
 ## Production
 
 - Branch: `main`
