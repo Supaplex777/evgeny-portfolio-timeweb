@@ -205,6 +205,20 @@ test('POST /api/projects without a session cookie is rejected with 401', async (
   assert.equal(fakeS3.objects.size, 0);
 });
 
+// 3b. PATCH/DELETE rejected without an owner session (public read/write boundary audit).
+// requireOwnerSession runs before the handler looks up the record, so a
+// non-existent id still proves the auth boundary without depending on
+// another test's fixture having run first.
+test('PATCH /api/projects/:id without a session cookie is rejected with 401', async () => {
+  const response = await request('/api/projects/does-not-matter', { method: 'PATCH', body: projectForm({ title: 'hacked by a public visitor' }) });
+  assert.equal(response.status, 401);
+});
+
+test('DELETE /api/projects/:id without a session cookie is rejected with 401', async () => {
+  const response = await request('/api/projects/does-not-matter', { method: 'DELETE' });
+  assert.equal(response.status, 401);
+});
+
 // 4. Origin-check enforcement
 test('POST /api/projects without Origin/Referer is rejected with 403 before touching S3', async () => {
   const cookie = await login();

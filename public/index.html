@@ -2982,7 +2982,19 @@ body.certificates-open{
 @media(prefers-reduced-motion:reduce){#skills .skill-panel{transition:none}}
 </style><script>(function(){
 'use strict';
+/* Skills has no backend of its own (no /api/skills route) - "save" only ever
+   writes to this visitor's own localStorage, never shared/production data.
+   Even so, the edit/save/cancel controls must stay owner-only: a public
+   visitor should see a read-only skills graph, matching the ?admin=1 gate
+   already used by Projects/Certificates for showing admin affordances. The
+   edit button is hidden (not just via CSS - the `hidden` attribute pulls it
+   out of layout and the tab order), and entering edit mode is refused at
+   the function level too, so re-enabling the button via devtools or firing
+   a direct click on it from the console still can't open the editor. */
+const ADMIN=new URLSearchParams(location.search).get('admin')==='1';
 const root=document.getElementById('skills'),panels=root.querySelector('.skill-panels'),card=root.querySelector('.skill-detail'),form=card.querySelector('form'),status=card.querySelector('.skill-status');
+const editBtn=card.querySelector('[data-action="edit"]');
+editBtn.hidden=!ADMIN;
 const key='evgeny-portfolio-skills-v1';
 const defaults=[['ИИ','AI Automation, AI Agents'],['Интеграции','API, Интеграции'],['Автоматизация','Python, Автоматизация процессов'],['Данные','SQL'],['Аналитика','Power BI, Аналитика данных'],['Инструменты','No-code']].map(([title,tags])=>({title,description:'',tags,level:0,levelLabel:'Укажите уровень'}));
 let data=defaults.map(x=>({...x})),active=-1,editing=false;
@@ -2993,14 +3005,14 @@ const previousNames=['AI и автоматизация','Интеграции','
 data.forEach((x,i)=>{if(x.title===previousNames[i])x.title=panelNames[i];});
 const outlines=['48,0 245,45 235,553 36,570','315,106 438,161 431,537 308,546','471,205 559,244 555,525 468,531','1135,230 1230,184 1231,535 1135,529','1279,151 1418,71 1425,553 1280,540','1529,35 1649,0 1656,582 1531,568'];
 function renderPanels(){panels.replaceChildren();data.forEach((x,i)=>{const b=document.createElement('button');b.type='button';b.className='skill-panel';b.setAttribute('aria-pressed',String(i===active));b.setAttribute('aria-label',x.title+' — открыть карточку');const label=document.createElement('span');const shortNames={'AI и автоматизация':'AI и автоматизация','Интеграции':'Интеграции','Программирование':'Код · Python','Базы данных':'Базы данных','Аналитика данных':'Аналитика','No-code':'No-code'};label.textContent=shortNames[x.title]||x.title;b.append(label);const ns='http://www.w3.org/2000/svg';const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 1672 941');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('aria-hidden','true');svg.classList.add('panel-contour');const shape=document.createElementNS(ns,'polygon');shape.setAttribute('points',outlines[i]);svg.append(shape);b.append(svg);b.style.setProperty('--panel-clip','polygon('+outlines[i].split(' ').map(p=>{const xy=p.split(',').map(Number);return (xy[0]/1672*100)+'% '+(xy[1]/941*100)+'%';}).join(',')+')');b.addEventListener('click',()=>{if(editing&&!confirm('Отменить несохранённые изменения?'))return;active=i;show();renderPanels();panels.children[i].focus({preventScroll:true});});panels.append(b);});}
-function mode(edit){editing=edit;form.hidden=!edit;card.querySelector('.detail-grid').hidden=edit;['save','cancel'].forEach(a=>card.querySelector('[data-action="'+a+'"]').hidden=!edit);card.querySelector('[data-action="edit"]').hidden=edit;}
+function mode(edit){if(edit&&!ADMIN)return;editing=edit;form.hidden=!edit;card.querySelector('.detail-grid').hidden=edit;['save','cancel'].forEach(a=>card.querySelector('[data-action="'+a+'"]').hidden=!edit);editBtn.hidden=edit||!ADMIN;}
 function show(){const x=data[active];card.hidden=false;mode(false);status.textContent='';card.querySelector('[data-view="title"]').textContent=x.title;card.querySelector('[data-view="description"]').textContent=x.description||'Добавьте описание навыка через «Редактировать».';const tags=card.querySelector('.skill-tags');tags.replaceChildren();x.tags.split(',').map(t=>t.trim()).filter(Boolean).forEach(t=>{const span=document.createElement('span');span.textContent=t;tags.append(span);});card.querySelector('.skill-meter i').style.width=x.level+'%';card.querySelector('.skill-meter').setAttribute('aria-valuenow',x.level);card.querySelector('[data-view="level"]').textContent=x.levelLabel+' · '+x.level+'%';}
 form.elements.level.addEventListener('input',()=>form.elements.levelNumber.value=form.elements.level.value);
 form.elements.levelNumber.addEventListener('input',()=>form.elements.level.value=Math.max(0,Math.min(100,Number(form.elements.levelNumber.value)||0)));
-function save(){if(!form.reportValidity())return;const title=form.elements.title.value.trim();if(!title){form.elements.title.setCustomValidity('Введите название');form.elements.title.reportValidity();return;}data[active]={title,description:form.elements.description.value.trim(),tags:form.elements.tags.value.trim(),level:Number(form.elements.levelNumber.value),levelLabel:form.elements.levelLabel.value.trim()||'Уровень'};let stored=true;try{localStorage.setItem(key,JSON.stringify(data));}catch{stored=false;}show();renderPanels();status.textContent=stored?'Сохранено в этом браузере':'Изменено, но браузер не разрешил сохранение. Не закрывайте страницу.';}
+function save(){if(!ADMIN)return;if(!form.reportValidity())return;const title=form.elements.title.value.trim();if(!title){form.elements.title.setCustomValidity('Введите название');form.elements.title.reportValidity();return;}data[active]={title,description:form.elements.description.value.trim(),tags:form.elements.tags.value.trim(),level:Number(form.elements.levelNumber.value),levelLabel:form.elements.levelLabel.value.trim()||'Уровень'};let stored=true;try{localStorage.setItem(key,JSON.stringify(data));}catch{stored=false;}show();renderPanels();status.textContent=stored?'Сохранено в этом браузере':'Изменено, но браузер не разрешил сохранение. Не закрывайте страницу.';}
 form.elements.title.addEventListener('input',()=>form.elements.title.setCustomValidity(''));
 form.addEventListener('submit',e=>{e.preventDefault();save();});
-card.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;switch(b.dataset.action){case 'edit':{const x=data[active];for(const name of ['title','description','tags','level','levelLabel'])form.elements[name].value=x[name];form.elements.levelNumber.value=x.level;mode(true);status.textContent='';form.elements.title.focus();break;}case 'save':save();break;case 'cancel':show();break;case 'close':if(editing&&!confirm('Отменить несохранённые изменения?'))return;const last=active;card.hidden=true;mode(false);active=-1;renderPanels();panels.children[last].focus();break;}});
+card.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;switch(b.dataset.action){case 'edit':{if(!ADMIN)return;const x=data[active];for(const name of ['title','description','tags','level','levelLabel'])form.elements[name].value=x[name];form.elements.levelNumber.value=x.level;mode(true);status.textContent='';form.elements.title.focus();break;}case 'save':save();break;case 'cancel':show();break;case 'close':if(editing&&!confirm('Отменить несохранённые изменения?'))return;const last=active;card.hidden=true;mode(false);active=-1;renderPanels();panels.children[last].focus();break;}});
 renderPanels();
 })();
 </script><style id="v43-panel-typography">
