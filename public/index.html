@@ -3014,6 +3014,13 @@ form.elements.title.addEventListener('input',()=>form.elements.title.setCustomVa
 form.addEventListener('submit',e=>{e.preventDefault();save();});
 card.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;switch(b.dataset.action){case 'edit':{if(!ADMIN)return;const x=data[active];for(const name of ['title','description','tags','level','levelLabel'])form.elements[name].value=x[name];form.elements.levelNumber.value=x.level;mode(true);status.textContent='';form.elements.title.focus();break;}case 'save':save();break;case 'cancel':show();break;case 'close':if(editing&&!confirm('Отменить несохранённые изменения?'))return;const last=active;card.hidden=true;mode(false);active=-1;renderPanels();panels.children[last].focus();break;}});
 renderPanels();
+/* Belt-and-suspenders against bfcache: Safari/Firefox can restore this exact
+   DOM (including whatever the edit button's `hidden` attribute was at the
+   moment of navigating away) from back/forward cache without re-running the
+   script above. Re-assert the gate on `pageshow` too so a public visitor who
+   navigates away mid-edit and comes back via browser back/forward can't end
+   up looking at a page frozen in an editable state. */
+window.addEventListener('pageshow',()=>{editBtn.hidden=editing?true:!ADMIN;});
 })();
 </script><style id="v43-panel-typography">
 /* Keep the artwork as the panel surface; interaction accents belong to its caption. */
