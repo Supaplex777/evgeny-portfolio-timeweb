@@ -4,6 +4,31 @@
 
 Документ описан на основе прямого чтения кода, тестов, README и истории git на момент снимка — не по памяти и не по старым предположениям.
 
+**Это единственный handoff-документ репозитория.** В репозитории два крупных продукта — Portfolio (сайт-визитка) и TerraIntel — и один набор общей инфраструктуры, на которой они оба работают. Чтобы не плодить конфликтующие источники истины, всё описано в этом одном файле, с чёткой маркировкой, к чему относится каждый раздел:
+
+| № | Раздел | К чему относится |
+|---|---|---|
+| 1 | Состояние репозитория | Shared |
+| 2 | Общая архитектура | Shared (фиксирует именно границу Portfolio / TerraIntel / Shared) |
+| 3 | Portfolio | **Portfolio** |
+| 4 | TerraIntel | **TerraIntel** |
+| 5 | Certificates | Shared-инфраструктура, но фича только Portfolio (TerraIntel её не использует) |
+| 6 | Projects / Supabase | Shared-инфраструктура, но фича только Portfolio |
+| 7 | Contact / Telegram | Shared-инфраструктура (`server.js`), фича только Portfolio |
+| 8 | Portfolio AI | Shared-инфраструктура (`server.js`), фича только Portfolio; не путать с TerraIntel AI (раздел 4) |
+| 9 | Routes | Shared (таблица помечает модуль каждого маршрута) |
+| 10 | Environment variables | Shared (таблица сгруппирована по модулю) |
+| 11 | Production / Timeweb | **Shared** — один процесс, один деплой на оба продукта |
+| 12 | Tests | Shared (список файлов помечает, к какому модулю относится каждый) |
+| 13 | Safety / Security | Shared, с отдельным пунктом про TerraIntel-specific safety (forbidden claims) |
+| 14 | Критичные защищённые области | Явно разбито по Portfolio / TerraIntel / Certificates / Projects / Shared |
+| 15 | Development workflow | **Shared** |
+| 16 | Known tech debt | Смешанный — каждая строка таблицы сама по себе про Portfolio, TerraIntel или общую инфраструктуру |
+| 17 | Roadmap | Смешанный, аналогично |
+| 18 | START HERE | Сводка фактов по всем трём группам |
+
+Коротко: **Portfolio** — это всё в `public/index.html` + `lib/certificates.js` + `lib/projects.js` + инлайн-роуты `server.js` (`/api/contact`, `/api/ai`). **TerraIntel** — полностью изолированный модуль (`public/terraintel/**`, `lib/terraintel.js`, `/api/terraintel/*`), не делит код ни с чем, кроме самого Express-процесса. **Shared infrastructure** — сам `server.js` (монтирование роутеров, `helmet`, статика), Timeweb Cloud App Platform как единственная точка деплоя на оба продукта, и общий `npm test`.
+
 ---
 
 ## 1. Состояние репозитория (снимок)
