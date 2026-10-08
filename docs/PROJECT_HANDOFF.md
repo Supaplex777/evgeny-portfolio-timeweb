@@ -1,41 +1,58 @@
 # PROJECT HANDOFF — evgeny-portfolio-timeweb
 
-## 1. Executive summary
+Постоянный технический handoff-документ проекта. Цель: если текущая сессия/чат потеряны, новый ИИ-агент открывает этот файл и за один проход понимает, что это за проект, из чего он состоит, что уже реализовано, что в production, что нельзя ломать и как безопасно продолжать работу.
 
-`evgeny-portfolio-timeweb` is a Node.js/Express single-backend portfolio site for Evgeny Smirnov (AI Automation Specialist), with an almost entirely single-file frontend (`public/index.html`), a separate TerraIntel sub-application, three small backend "modules" (Certificates, Projects, Contact/AI), and a Timeweb Cloud deployment. Since PR #23 the Projects and Certificates sections have been fully migrated off Supabase onto a self-built Timeweb Cloud S3 backend with a shared owner-session auth system; Skills is a frontend-only, localStorage-backed section with no backend at all. The repo currently sits on `main` at commit `9b3101b5a9a60ec46e5c04647948c03665b705e8` (merged PR #26), with 94/94 tests passing locally. This document was produced by a read-only audit of the repository, git history, and closed PRs — no repository changes were made while preparing it.
+Документ описан на основе прямого чтения кода, тестов, README и истории git на момент снимка — не по памяти и не по старым предположениям.
 
-## 2. Current state
+---
 
-- Current `main` HEAD: **`9b3101b5a9a60ec46e5c04647948c03665b705e8`** (merge commit of PR #26).
-- Working tree: clean, no uncommitted changes, checked out on `main`.
-- Test suite: **94/94 passing** (`npm test`, just re-run against this exact commit).
-- Last three merged PRs (newest first): #26 (Skills bfcache hardening + AI/S3 optimization), #25 (Skills public/admin security fix), #24 (mobile responsive overhaul + removed blocking Supabase CDN script).
-- Production URL: `https://supaplex777-evgeny-portfolio-timeweb-1140.twc1.net/` — **not reachable from this sandbox** (egress to `twc1.net` is blocked); its deployed state has not been verified in this session and must be checked manually.
+## 1. Состояние репозитория (снимок)
 
-## 3. Repository structure
+| Параметр | Значение |
+|---|---|
+| Repository | `Supaplex777/evgeny-portfolio-timeweb` |
+| Branch (снимок сделан от) | `main` |
+| Актуальный SHA `main` | `9b3101b5a9a60ec46e5c04647948c03665b705e8` (merge PR #26) |
+| Дата снимка | 2026-10-08 |
+| Node.js | `>=20` (`package.json engines`); в окружении, где собран этот снимок, установлен Node v22.22.2 |
+| Package manager | npm (`package-lock.json` в репозитории) |
+| Test command | `npm test` → `node --test test/*.test.js` (без доп. зависимостей, без реальной сети) |
+| Текущее количество тестов | **94/94 passing** (проверено непосредственно перед написанием документа) |
+| Production hosting | Timeweb Cloud App Platform |
+| Production URL | `https://supaplex777-evgeny-portfolio-timeweb-1140.twc1.net/` |
+| Health route | `GET /health` → `{status:"ok", uptime, timestamp}` |
+
+**Важно:** эта песочница не может достучаться до `*.twc1.net` (egress заблокирован политикой сети контейнера), поэтому реальное состояние production **не верифицировано напрямую** в рамках подготовки этого документа — только код на `main`. Любой агент, перед тем как делать выводы о проде, должен либо получить доступ, либо явно попросить пользователя проверить вручную.
+
+---
+
+## 2. Общая архитектура
+
+Весь проект — **одно Express-приложение** (`server.js`), которое раздаёт статику и держит несколько независимых API-роутеров. Единого фреймворка на фронтенде нет — это серверный монолит + несколько самодостаточных HTML-файлов с инлайновыми CSS/JS.
 
 ```
 evgeny-portfolio-timeweb/
-├── server.js                     # Express app, /health, /api/contact, /api/ai, mounts routers
+├── server.js                      # Express: /, /health, /api/contact, /api/ai, монтирует роутеры ниже
 ├── package.json / package-lock.json
-├── .env.example                  # documents every env var actually read by the code
-├── README.md                     # STALE in places — see §13
+├── .env.example                   # шаблон переменных окружения
+├── README.md                      # частично устарел — см. раздел 19
 ├── lib/
-│   ├── certificates.js           # Certificates backend + shared S3/session/auth primitives
-│   ├── projects.js               # Projects backend (reuses certificates.js's S3 client & session)
-│   └── terraintel.js             # TerraIntel AI backend (fully independent)
+│   ├── terraintel.js              # TerraIntel AI backend — полностью независим
+│   ├── certificates.js            # Certificates backend + общие S3/session примитивы
+│   └── projects.js                # Projects backend (переиспользует S3-клиент и сессию из certificates.js)
 ├── public/
-│   ├── index.html                 # ~1.1MB single-file frontend: all sections, inline CSS/JS
-│   ├── certificates-rotate.js     # small standalone helper script for upload-preview rotation
-│   ├── assets/                    # 16 WebP images (hero, about, certificates, contacts, etc.)
+│   ├── index.html                 # ~3550 строк: Portfolio целиком (Home/About/Projects/Skills/
+│   │                               #   Certificates/Contacts/AI-панель/Legal) в одном файле
+│   ├── certificates-rotate.js     # отдельный хелпер поворота превью при загрузке сертификата
+│   ├── assets/                    # WebP-изображения (hero, about, сертификаты, контакты и т.д.)
 │   └── terraintel/
-│       ├── index.html             # separate TerraIntel frontend (~2.7MB, self-contained)
-│       └── vendor/                # local copy of MapLibre GL JS 5.7.1 (BSD-3)
+│       ├── index.html             # отдельный фронтенд TerraIntel (самодостаточный файл)
+│       └── vendor/                # локальная копия MapLibre GL JS 5.7.1 (BSD-3, вендоринг)
 ├── scripts/
-│   ├── migrate-certificates.js    # one-off Supabase→S3 certificate migration script
-│   └── seed-resellflow.js         # idempotent seeder for the ResellFlow project record
+│   ├── migrate-certificates.js    # одноразовый скрипт миграции Supabase → S3 (сертификаты)
+│   └── seed-resellflow.js         # идемпотентный сидер карточки проекта ResellFlow
 ├── supabase/
-│   └── projects_contacts.sql      # legacy SQL schema, kept for historical reference only
+│   └── projects_contacts.sql      # legacy SQL-схема, оставлена только для истории, кодом не читается
 └── test/
     ├── certificates.test.js
     ├── certificates-rotate.test.js
@@ -47,276 +64,398 @@ evgeny-portfolio-timeweb/
     └── helpers/
 ```
 
-**Independence:** TerraIntel (`public/terraintel/**`, `lib/terraintel.js`, its tests, `/terraintel/`, `/api/terraintel/*`) is a fully separate sub-app sharing only the Express process and `helmet`/static-serving middleware — it has its own AI prompt, model, rate limits, and frontend, and does not touch Projects/Certificates/Skills/Contact code. Everything else (main portfolio: Home, About, Projects, Skills, Certificates, Contacts, AI assistant, Legal/Privacy) lives inside `public/index.html` as one page with hash-based section switching.
+### Что независимо, а что общее
 
-## 4. Architecture
+- **TerraIntel** (`public/terraintel/**`, `lib/terraintel.js`, `/terraintel/`, `/api/terraintel/*`) — полностью отдельное приложение внутри того же процесса. Общий только Express-процесс и глобальный `helmet`/статика. Свой AI-промпт, своя модель (`sber/gigachat-2`), свои лимиты, свой фронтенд. Не использует Projects/Certificates/Skills/Contact код и наоборот.
+- **Portfolio** (главный сайт: Home/About/Projects/Skills/Certificates/Contacts/AI-ассистент/Legal) — весь живёт в одном файле `public/index.html`, переключение разделов — через CSS `:target` по hash-навигации (`#about`, `#projects`, `#skills`, `#certificates-page` и т.д.), без перезагрузки страницы.
+- **Certificates** и **Projects** — два разных backend-модуля (`lib/certificates.js`, `lib/projects.js`), но физически используют **один и тот же** бакет Timeweb S3 и **одну и ту же** owner-сессию (cookie `cert_admin`, `Path=/api`), различаясь только префиксом ключей в S3.
+- **Contact/Telegram** и **AI-ассистент портфолио** (`/api/contact`, `/api/ai`) реализованы инлайн прямо в `server.js`, отдельных `lib/`-модулей для них нет.
+- **Skills** — единственный раздел вообще без backend: данные живут только в `localStorage` браузера посетителя (подробности в разделе 3).
 
-**Stack:** Node.js + Express 4, `helmet` (CSP disabled — the frontend relies on inline `<style>`/`<script>`), `express-rate-limit`, `multer` (memory storage, used for file uploads), `bcryptjs` (owner password hash), `@aws-sdk/client-s3` v3 (against Timeweb Cloud S3, S3-compatible, `forcePathStyle: true`). No ORM, no managed database — all persistent portfolio data (Projects, Certificates) is JSON metadata objects + binary files stored directly in Timeweb S3.
+### Где что хранится
 
-**What's frontend-only / no backend:** Skills (localStorage only, see §9), all visual/animation logic, the client-side CSV→Robust-Z anomaly pipeline in TerraIntel (only the final small anomaly list goes to the server).
+| Данные | Где хранятся |
+|---|---|
+| Сертификаты (метаданные, файлы, превью) | Timeweb S3, бакет `S3_BUCKET_CERTIFICATES`, префиксы `originals/`, `previews/`, `metadata/` |
+| Проекты портфолио (метаданные, обложки, галерея) | тот же бакет Timeweb S3, префикс `projects/` |
+| Навыки (Skills) | `localStorage` браузера посетителя, ключ `evgeny-portfolio-skills-v1`; ничего не уходит на сервер |
+| Owner-сессия (админ-вход) | подписанная HMAC-SHA256 cookie `cert_admin`, без серверного session-store |
+| Заявки с контактной формы | не хранятся в БД — только пересылаются в Telegram (обязательно) и опционально на email через Resend; есть временная in-memory защита от дублей (10 минут, в памяти процесса) |
+| Проект TerraIntel (CSV, результат анализа) | только `localStorage` браузера посетителя TerraIntel (см. раздел 4) — backend ничего не хранит |
 
-**What uses Timeweb S3:** Projects and Certificates (same bucket and credentials, see §7/§8), distinguished purely by S3 key prefix.
+---
 
-**What uses localStorage:** Skills only (`evgeny-portfolio-skills-v1`).
+## 3. PORTFOLIO (главный сайт)
 
-**What uses an external AI API:** `/api/ai` (main-site assistant, Polza AI, `openai/gpt-oss-20b`) and `/api/terraintel/analyze` (Polza AI, `sber/gigachat-2`, independent system prompt and config) — see §10 and §12.
+Один файл `public/index.html`, роутинг разделов через CSS `:target` + hash-навигацию, оверлейные (`position:fixed`) «страницы» со своим внутренним скроллом.
 
-### Flow diagrams
+**Разделы:**
+- **Home / Hero** — приветственный экран с hero-изображением (WebP), анимированным меню и CTA.
+- **About («Обо мне»)** — интерактивная панель с несколькими состояниями.
+- **Projects («Проекты»)** — карточки проектов, читаются из `GET /api/projects` (backend на Timeweb S3, см. раздел 6); для владельца (`?admin=1` + валидная сессия) доступны создание/редактирование/удаление и загрузка галереи. На фронтенде есть два захардкоженных fallback-объекта (TerraIntel и временно — ResellFlow), которые подставляются, пока в backend нет реальной записи с соответствующим слагом/названием — это чисто фронтенд-заглушки, не путать с самим приложением TerraIntel.
+- **Skills («Навыки»)** — секция `<section id="skills">`, данные только в `localStorage`, backend отсутствует полностью (подробнее — раздел «известные особенности» ниже).
+- **Certificates («Сертификаты»)** — карточки по категориям (`ai`/`code`/`data`/`test`/`basic`/`new`), читаются из `GET /api/certificates`; для владельца доступны загрузка/редактирование/удаление/поворот превью.
+- **Contacts («Контакты»)** — форма, отправляющая `POST /api/contact` (раздел 7).
+- **AI-ассистент портфолио** — плавающая кнопка (`#evg-ai-launch`) открывает панель `#evg-ai-panel`, общение через `POST /api/ai` (раздел 8).
+- **Legal/Privacy** — отдельная `:target`-страница с политикой.
 
-**PUBLIC USER:**
-```
-Browser → GET / (public/index.html, static) → inline JS on load
-        → GET /api/projects, GET /api/certificates, GET /api/certificates/counts
-        → data rendered client-side into Projects/Certificates sections
-        (Skills renders purely from localStorage/defaults, no network call)
-```
+**Responsive-поведение:** burger-меню на мобильных, touch-таргеты ≥44px, `env(safe-area-inset-*)`, `100dvh`+`visualViewport` для клавиатуры на мобильных, `@media(hover:hover) and (pointer:fine)` для hover-эффектов только на устройствах с мышью, `@media(prefers-reduced-motion:reduce)`, брейкпоинты `max-width:900px` (мобильный/планшет), `max-width:520px` (маленький телефон), `min-width:1700px` (широкий десктоп). Это результат отдельного прохода по мобильной адаптации (см. историю PR в разделе 16) — любое новое изменение фронтенда стоит проверять на мобильной и десктопной ширине отдельно.
 
-**ADMIN (owner):**
-```
-Browser → opens ?admin=1 (frontend-only UI flag, re-derived independently per section)
-        → POST /api/certificates/login { password } → bcrypt.compare against ADMIN_PASSWORD_HASH
-        → signed HMAC session cookie (cert_admin, Path=/api) set on success
-        → subsequent POST/PATCH/DELETE to /api/certificates/* and /api/projects/*
-          pass requireSameOrigin + requireOwnerSession middleware
-        → on success: PutObjectCommand/DeleteObjectsCommand against Timeweb S3
-```
+**[ВАЖНАЯ ОСОБЕННОСТЬ — Skills]** У раздела «Навыки» **нет backend вообще**: ни одного роута `/api/skills` нигде в проекте не существует (подтверждено и грепом, и отдельным тестом `test/skills-public-admin.test.js`). Кнопка «Редактировать» видна только при `?admin=1` (чисто фронтенд-флаг, независимо вычисляемый прямо в IIFE этого раздела) и защищена на нескольких уровнях (атрибут `hidden`, проверки внутри `mode()`/обработчика клика/`save()`, повторное применение гейта на событии `pageshow` — на случай восстановления страницы из bfcache в Safari/Firefox без повторного выполнения скрипта). Любое «сохранение» как админ пишет только в `localStorage` этого конкретного браузера — никогда не попадает на сервер и не видно другим посетителям или реальному владельцу удалённо. Это исторически было реальной уязвимостью (кнопка редактирования была видна и работала для любого посетителя) — исправлено, тест закрепляет инвариант.
 
-**AI ASSISTANT (main site):**
-```
-Browser (#evg-ai-launch) → opens #evg-ai-panel
-        → POST /api/ai { question, context } (context assembled client-side from visible page data)
-        → server: buildCertificatesContext(await getCertificatesSummaryForAI())
-                  (reads cached or fresh S3 certificate summary, 60s TTL cache)
-        → system prompt + certificatesContext + context + question → Polza AI
-          (https://polza.ai/api/v1/chat/completions, model openai/gpt-oss-20b, non-streaming)
-        → single JSON response rendered in the panel
-```
+---
 
-**TERRAINTEL (fully separate):**
-```
-Browser → GET /terraintel/ (separate HTML, own CSS/JS, MapLibre GL)
-        → CSV parsed and reduced to anomalies entirely client-side
-        → POST /api/terraintel/analyze { anomalies[] } (own rate limiter, own daily cap, own timeout)
-        → lib/terraintel.js → Polza AI (sber/gigachat-2, separate system prompt)
-        → never shares code, data, or UI with the main portfolio
-```
+## 4. TerraIntel — модульная интеллектуальная платформа анализа геопространственных и сенсорных данных
 
-## 5. Routes / API
+Отдельное учебное приложение внутри того же Express-процесса: `public/terraintel/index.html` (фронтенд) + `lib/terraintel.js` (backend, роут `/api/terraintel/analyze`).
 
-| Route | Method | Public/Admin | Auth | Data source |
+### [РЕАЛИЗОВАНО]
+
+- **Поток CSV → обнаружение аномалий → карта → ИИ-интерпретация → отчёт**, целиком работающий end-to-end для **магнитометрии + GPS/ГЛОНАСС**.
+- **Парсинг CSV** — собственный парсер с поддержкой кавычек, автоопределением разделителя (`,`/`;`/таб), делается **полностью в браузере**; сырые CSV на сервер никогда не уходят.
+- **Обнаружение аномалий (Robust Z)**: медиана и MAD (median absolute deviation) по магнитометрическим значениям, `robust_z = 0.67449 × (value − median) / MAD`; локальные пики по модулю Robust Z выше порога, сортировка по убыванию, ограничение — до 20 кандидатов на запрос.
+- **Синхронизация GPS/магнитометра**: при наличии временных меток — доля точек магнитометра, попадающих в GPS-фиксацию в пределах 2 медианных интервалов GPS; без временных меток — честно показывается «не рассчитано» (сопоставление по порядку строк), а не выдуманное число.
+- **Карта**: MapLibre GL JS 5.7.1, локально завендоренная в `public/terraintel/vendor/` (лицензия BSD-3), тайлы — MapTiler по клиентскому ключу (`TERRAINTEL_MAPTILER_KEY` зашит прямо в JS — это ожидаемо для доменно-ограниченных MapTiler-ключей, но стоит проверять в кабинете MapTiler, что домен-рестрикция реально настроена).
+- **ИИ-интерпретация**: same-origin запрос `POST /api/terraintel/analyze` (никакого CORS и Cloudflare Worker, всё внутри одного процесса); на сервер уходят только подготовленные поля аномалии (`id`, `lat`, `lon`, `robust_z`, `sample_index`, `timestamp`) — whitelist на уровне `validatePayload`, любые другие поля отбрасываются. Используется Polza AI, модель `sber/gigachat-2` (управляется `TERRAINTEL_MODEL`), независимый от портфолио-ассистента системный промпт.
+- **Human-in-the-loop / safety**: отдельный системный промпт прямо запрещает модели утверждать обнаружение мин/оружия/боеприпасов или объявлять территорию безопасной; сервер дополнительно фильтрует такие утверждения регулярным выражением `FORBIDDEN_CLAIMS` и отбрасывает их на бэкенде независимо от того, что вернула модель; каждая рекомендация явно требует экспертной проверки специалистом.
+- **Fallback при недоступности ИИ**: если Polza недоступна/вернула некорректный JSON — найденные локально аномалии всё равно сохраняются с нейтральным локальным объяснением на фронтенде, пользователь видит причину («AI-интерпретация недоступна»).
+- **Защита расходов**: отдельный rate limit по IP (`TERRAINTEL_RATE_LIMIT`, по умолчанию 10/15 мин), общий дневной бюджет на процесс (`TERRAINTEL_DAILY_LIMIT`, по умолчанию 200/сутки, in-memory — обнуляется при рестарте), таймаут запроса к Polza (`TERRAINTEL_TIMEOUT_MS`, по умолчанию 30000 мс), лимит 20 аномалий и 64 КБ на тело запроса.
+- **Отчёт/«PDF»**: генерируется как HTML и открывается в новой вкладке, «сохранение в PDF» — через системный диалог печати браузера (`window.print()`); отдельного серверного PDF-генератора нет. Также доступны экспорт в CSV и GeoJSON.
+- **Тесты backend**: `test/terraintel.test.js` — валидация payload, whitelist полей, коды ошибок (400/413/429/502/504), фильтрация небезопасных утверждений модели, устойчивость парсинга JSON-ответа модели к markdown-обёртке.
+
+### [ЧАСТИЧНО / НЕСООТВЕТСТВИЕ МАКЕТА РЕАЛЬНОСТИ]
+
+- Лендинг TerraIntel и личный кабинет **визуально обещают 5 сенсоров** (LiDAR, тепловизор, RGB-камера, магнитометр, GPS/ГЛОНАСС) и полноценную многопроектную SaaS-платформу (сайдбар «Мои проекты», «Архив», «Источники данных», «Центр данных», «Настройки», пагинация и т.д.). **Реально работает только связка магнитометрия + GPS/ГЛОНАСС**; разделы «Архив», «Источники данных», «ИИ-анализ» (как отдельная страница), «Центр данных», «Настройки» в сайдбаре — это заглушки, открывающие модалку «раздел в разработке», без какой-либо функциональности.
+- **Хранение проекта — не многопроектное**: несмотря на весь интерфейс «моих проектов», данные хранятся **только в `localStorage`** одним объектом (ключ вида `terraintel_mvp_project_v13`), новый анализ **молча перезаписывает** предыдущий без подтверждения. Нет backend-БД, нет реальных аккаунтов — «Евгений Смирнов — Владелец проекта» в сайдбаре это статичный текст, не сессия.
+- В HTML лендинга TerraIntel вшита base64-картинка (~2.6 МБ) прямо в `<style>` как `background-image` — не вынесена в отдельный WebP-файл, как это сделано для hero-изображения на главном сайте. Существенно утяжеляет каждую загрузку `/terraintel/`.
+- Фронтенд-логика обнаружения аномалий (`terraDetect`, парсер CSV, расчёт синхронизации) **не покрыта тестами вообще** — тесты существуют только для backend (`lib/terraintel.js`). Вся расчётная математика (Robust Z, пикдетекция) живёт непротестированной внутри `public/terraintel/index.html`.
+
+### [ПЛАН]
+
+- LiDAR/тепловизор/RGB-камера — заявлены в UI и на лендинге как видение продукта, в коде отсутствуют полностью. Любая работа над ними — это новая фича, а не доработка существующего, и должна восприниматься именно так.
+- Многопроектность, реальные аккаунты, «Архив», «Источники данных», «Центр данных», «Настройки» — заявлены в интерфейсе, не реализованы нигде.
+
+### Env и маршруты TerraIntel
+
+См. таблицы в разделах 10 и 11.
+
+---
+
+## 5. CERTIFICATES
+
+- Backend: `lib/certificates.js`, монтируется в `server.js` на `/api/certificates`.
+- **Supabase здесь больше не используется.** Хранение — Timeweb Cloud S3 (`@aws-sdk/client-s3`, `forcePathStyle: true`), один S3-клиент на процесс (`createS3Client()` — модульный синглтон, раньше создавался заново на каждый вызов — оптимизировано в PR #26).
+- Структура в S3: оригинал файла (`originals/<category>/<id>/<filename>`), превью WebP (`previews/<category>/<id>.webp`), JSON-метаданные (`metadata/<category>/<id>.json`) — нет управляемой БД, метаданные — это сами JSON-файлы в бакете.
+- Категории: `ai`, `code`, `data`, `test`, `basic`, `new`.
+- **Auth владельца**: `POST /api/certificates/login` — bcrypt-сравнение пароля с `ADMIN_PASSWORD_HASH` (никогда не хранится в виде открытого текста), при успехе выставляется подписанная HMAC-SHA256 cookie (`cert_admin`, `Path=/api`, `HttpOnly`, `SameSite=Strict`, `Secure`, TTL 24 часа). `GET /api/certificates/session` сообщает, авторизован ли текущий запрос.
+- Все мутирующие роуты (`POST /`, `PATCH /:id`, `DELETE /:id`) защищены связкой `requireSameOrigin` (проверка Origin/Referer против `CERT_ALLOWED_ORIGIN`) + `requireOwnerSession` (валидная cookie) → без валидной сессии ответ `401`.
+- **Upload/edit/delete/rotate**: загрузка файла + опционального превью (`multer`, память, лимит `CERT_MAX_FILE_SIZE_MB`, по умолчанию 15 МБ); `PATCH` обновляет заголовок/описание/превью; `DELETE` удаляет метаданные + оригинал + превью одним запросом к S3; поворот превью при загрузке реализован отдельным клиентским хелпером `public/certificates-rotate.js` (чистые функции, протестированы в `test/certificates-rotate.test.js`).
+- **AI-контекст**: `getCertificatesSummaryForAI()` формирует сводку сертификатов для ассистента портфолио (раздел 8); с PR #26 результат кэшируется на 60 секунд (`AI_SUMMARY_CACHE_TTL_MS`), кэш явно инвалидируется (`invalidateAiSummaryCache()`) сразу после успешного создания/обновления/удаления сертификата — чтобы владелец не ждал до минуты, чтобы увидеть правку в ответах ассистента.
+- **История миграции**: было Supabase → теперь собственный backend на Timeweb S3 (миграция зафиксирована в `scripts/migrate-certificates.js` — однократный read-only скрипт переноса, читает из Supabase, пишет в S3, ничего не трогает в Supabase).
+
+---
+
+## 6. PROJECTS / Supabase
+
+**Факт по актуальному `main`: Supabase для раздела «Проекты» больше НЕ используется.** Это могло быть не так на более ранних этапах разработки (и ранее один из разговоров с пользователем предполагал, что миграция Projects с Supabase — это ещё предстоящая отдельная задача), но на снимке `9b3101b5...` раздел уже полностью мигрирован.
+
+- Backend: `lib/projects.js`, монтируется на `/api/projects`.
+- Хранение: **тот же самый** бакет Timeweb S3, что и Certificates (`S3_BUCKET_CERTIFICATES`, тот же `createS3Client()`), но под отдельным префиксом ключей `projects/metadata/<id>.json`, `projects/originals/<id>/cover.webp`, `projects/originals/<id>/gallery/<imageId>.webp` — отдельного S3-бакета для проектов нет.
+- Одна JSON-запись на проект (id — UUID), без управляемой БД.
+- Поля: `title`, `slug` (генерируется из `title`), `summary`, `description`, `goal`, `result`, `status` (`В разработке`/`MVP`/`Завершён`/`Активный`), `category` (`ai`/`automation`/`web`/`data`/`other`), `tags`, `cover_url` (WebP), `project_url`/`github_url`/`demo_url`, `published` (черновики скрыты от публичных запросов, видны владельцу), галерея (до 8 изображений).
+- Auth мутирующих роутов — **переиспользует** `requireSameOrigin`/`requireOwnerSession`/`verifySession`/`parseCookies` прямо из `lib/certificates.js` (один и тот же логин, одна cookie на оба модуля).
+- Что ещё относится к Supabase как legacy-зависимости, не путать с Projects:
+  - `scripts/migrate-certificates.js` — читает из Supabase (переменные `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`), но это касается **Certificates**, не Projects, и это read-only одноразовый скрипт.
+  - `supabase/projects_contacts.sql` — legacy SQL-схема в репозитории, оставлена для истории, не читается никаким работающим кодом.
+  - В `public/index.html` остались два **неактивных** упоминания Supabase: explaining-комментарий о том, что блокирующий `<script>`-тег Supabase SDK был удалён (это и был фикс реального продакшен-бага — см. раздел 9), и строка `'Supabase'` внутри тегов захардкоженной fallback-карточки TerraIntel в разделе «Проекты» — это просто текстовая метка на карточке-заглушке, не реальная зависимость.
+
+**Вывод для нового агента:** если задача формулируется как «мигрировать Projects с Supabase» — такая задача уже выполнена, сначала проверьте код, не начинайте миграцию заново.
+
+---
+
+## 7. CONTACT / Telegram
+
+Реализовано инлайн в `server.js`, роут `POST /api/contact`.
+
+- **Валидация**: `name` ≥ 2 символов, `contact` ≥ 3 символов, `message` ≥ 10 символов, `project_type` опционален; все текстовые поля чистятся от управляющих символов и обрезаются по максимальной длине.
+- **Honeypot**: скрытое поле `company` — если заполнено, боту тихо возвращается `204` без какой-либо отправки.
+- **Rate limit**: 5 запросов / 15 минут с одного IP (`express-rate-limit`).
+- **Duplicate protection**: in-memory фингерпринт (`ip|name|contact|message`), окно 10 минут → повтор получает `409`; фингерпринт фиксируется **только после успешной** отправки в Telegram, чтобы неудачная попытка не блокировала немедленный повторный ввод.
+- **Telegram Bot API — обязательный основной канал**: `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`. Сообщение отправляется **без `parse_mode`** (plain text) — это намеренная защита от инъекций разметки через то, что ввёл посетитель формы, а не просто санитизация. Если токен/chat id не настроены — сервер **честно возвращает `500`**, а не притворяется, что заявка отправлена.
+- **Таймаут** запроса к Telegram API — 8 секунд (`AbortSignal.timeout(8000)`).
+- **Обработка ошибок**: различаются сетевые/таймаут-ошибки (`TimeoutError`/`AbortError`/`TypeError` → `503`, «Telegram временно недоступен») и HTTP-ошибки самого Telegram API (→ `502`). Токен и полный URL запроса **никогда не логируются** (URL содержит токен бота в пути).
+- **Email через Resend — опциональный best-effort второй канал**: отправляется только **после** успешного Telegram, его собственная ошибка никогда не влияет на итоговый ответ формы. Управляется `RESEND_API_KEY` (или алиас `EMAIL_API_KEY`) + `CONTACT_EMAIL_FROM`; получатель — `CONTACT_EMAIL_TO` (по умолчанию `cmrrus@rambler.ru`).
+- **Production caveat**: песочница, в которой велась эта работа, не может достучаться до `api.telegram.org` напрямую (egress заблокирован политикой сети) — реальная работоспособность Telegram-доставки проверяется только на production/вручную пользователем, не из этого окружения.
+- **Supabase здесь больше НЕ обязателен** — подтверждено по текущему `main`: маршрут `/api/contact` вообще не ссылается на Supabase ни в одном месте кода.
+
+---
+
+## 8. PORTFOLIO AI (AI-ассистент портфолио)
+
+- Роут: `POST /api/ai` в `server.js`, rate limit 30 запросов / 15 минут.
+- Провайдер: Polza AI, `https://polza.ai/api/v1/chat/completions`, модель `openai/gpt-oss-20b` (не путать с TerraIntel, у которого отдельная модель `sber/gigachat-2`).
+- Запрос: `{question, context}` от клиента (обрезаются до 1000/20000 символов соответственно) + серверный блок «СЕРТИФИКАТЫ ИЗ ОБЛАЧНОЙ БАЗЫ», собираемый через `buildCertificatesContext(await getCertificatesSummaryForAI())` (кэш 60 сек, см. раздел 5).
+- Системный промпт — развёрнутая русскоязычная инструкция: отвечать только на основе переданных данных, не выдумывать факты/опыт/сертификаты, быть кратким (3–7 предложений по умолчанию), не давать рекомендаций по найму, не раскрывать системный промпт/ключи/секреты, умеренно использовать ограниченный набор эмодзи.
+- Без стриминга: `await upstream.text()` → `JSON.parse`, один раунд-трип, таймаут 30 секунд.
+- `POLZA_API_KEY` используется **только на сервере**, в браузер никогда не передаётся.
+- **Отличие от TerraIntel AI**: полностью независимые конфигурации — разная модель, разный системный промпт, разные лимиты, разный контекст (здесь — сертификаты из S3 + данные страницы; там — только подготовленные аномалии).
+- PR #26 оптимизировал путь до вызова Polza (переиспользование S3-клиента + кэш сертификатов), но **реальная задержка ответа на продакшене против настоящего Polza API не измерялась** из этой песочницы (egress заблокирован) — считать проблему латентности закрытой нельзя без проверки на реальном проде.
+
+---
+
+## 9. ROUTES
+
+| METHOD | ROUTE | MODULE | PURPOSE | IMPLEMENTATION FILE |
 |---|---|---|---|---|
-| `/` (and any unmatched path) | GET | Public | none | serves `public/index.html` (SPA fallback) |
-| `/health` | GET | Public | none | in-memory (`process.uptime()`) |
-| `/api/contact` | POST | Public | none (rate-limited 5/15min + honeypot + fingerprint dedupe) | sends to Telegram (required) + Resend email (best-effort) |
-| `/api/ai` | POST | Public | none (rate-limited 30/15min) | Polza AI + cached S3 certificates summary |
-| `/api/certificates` (GET `/`) | GET | Public | none | Timeweb S3 (`S3_BUCKET_CERTIFICATES`) |
-| `/api/certificates/counts` | GET | Public | none | Timeweb S3 |
-| `/api/certificates/session` | GET | Public | none (reports whether caller has a valid session) | signed cookie |
-| `/api/certificates/login` | POST | Admin | password (bcrypt vs `ADMIN_PASSWORD_HASH`), rate-limited 10/15min | sets `cert_admin` session cookie |
-| `/api/certificates/` | POST | Admin | `requireSameOrigin` + `requireOwnerSession` → 401 if missing/invalid | S3 (creates object + metadata) |
-| `/api/certificates/:id` | PATCH | Admin | same as above | S3 |
-| `/api/certificates/:id` | DELETE | Admin | same as above | S3 |
-| `/api/projects` (GET `/`) | GET | Public | none | Timeweb S3 (same bucket as Certificates, `projects/` prefix) |
-| `/api/projects/:id` | GET | Public | none | S3 |
-| `/api/projects/` | POST | Admin | `requireSameOrigin` + `requireOwnerSession` (reused from certificates.js, same cookie) | S3 |
-| `/api/projects/:id` | PATCH | Admin | same | S3 |
-| `/api/projects/:id` | DELETE | Admin | same | S3 |
-| `/api/projects/:id/gallery` | POST | Admin | same | S3 |
-| `/api/projects/:id/gallery/:imageId` | DELETE | Admin | same | S3 |
-| `/api/terraintel/analyze` | POST | Public | none (own rate limiter per-IP + daily global cap) | Polza AI (`sber/gigachat-2`) |
-| `/terraintel/` | GET | Public | none | `public/terraintel/index.html` (via `terraIntelPageHeaders` middleware) |
+| GET | `/` и любой несовпавший путь | Portfolio (SPA fallback) | отдаёт `public/index.html` | `server.js` |
+| GET | `/health` | Shared | health-check (`status`, `uptime`, `timestamp`) | `server.js` |
+| POST | `/api/contact` | Contact/Telegram | приём заявки с формы, доставка в Telegram (+опц. email) | `server.js` |
+| POST | `/api/ai` | Portfolio AI | вопрос-ответ ассистента портфолио (Polza AI) | `server.js` |
+| GET | `/api/certificates` | Certificates | список сертификатов по категории | `lib/certificates.js` |
+| GET | `/api/certificates/counts` | Certificates | счётчики сертификатов по категориям | `lib/certificates.js` |
+| GET | `/api/certificates/session` | Certificates | проверка, авторизован ли текущий запрос | `lib/certificates.js` |
+| POST | `/api/certificates/login` | Certificates | вход владельца (bcrypt + cookie-сессия) | `lib/certificates.js` |
+| POST | `/api/certificates/` | Certificates (admin) | создать сертификат (файл + метаданные) | `lib/certificates.js` |
+| PATCH | `/api/certificates/:id` | Certificates (admin) | обновить заголовок/описание/превью | `lib/certificates.js` |
+| DELETE | `/api/certificates/:id` | Certificates (admin) | удалить сертификат (метаданные+файл+превью) | `lib/certificates.js` |
+| GET | `/api/projects` | Projects | список проектов (черновики видны только владельцу) | `lib/projects.js` |
+| GET | `/api/projects/:id` | Projects | детали одного проекта | `lib/projects.js` |
+| POST | `/api/projects/` | Projects (admin) | создать проект | `lib/projects.js` |
+| PATCH | `/api/projects/:id` | Projects (admin) | обновить проект | `lib/projects.js` |
+| DELETE | `/api/projects/:id` | Projects (admin) | удалить проект (+вся его галерея) | `lib/projects.js` |
+| POST | `/api/projects/:id/gallery` | Projects (admin) | загрузить изображения в галерею (лимит 8) | `lib/projects.js` |
+| DELETE | `/api/projects/:id/gallery/:imageId` | Projects (admin) | удалить одно изображение галереи | `lib/projects.js` |
+| POST | `/api/terraintel/analyze` | TerraIntel | ИИ-интерпретация подготовленных аномалий | `lib/terraintel.js` |
+| GET | `/terraintel/` (и файлы под `/terraintel/*`) | TerraIntel | статика фронтенда TerraIntel | `server.js` (`terraIntelPageHeaders`) + `public/terraintel/index.html` |
 
-Note: there is **no `/api/skills` route anywhere** — confirmed by grep against `server.js` and `lib/` (also pinned by a regression test, §9/§16).
+**Важно:** роута `/api/skills` не существует нигде — у Skills нет backend вообще (раздел 3).
 
-## 6. Public vs Admin
+---
 
-The `?admin=1` query parameter is read independently by three separate scripts (Projects, Certificates, Skills), each deriving its own local `ADMIN`/`ADMIN_MODE` boolean from `new URLSearchParams(location.search).get('admin')`. **This is purely a frontend UI-visibility signal.** It is never sent to, or read by, the backend (confirmed: no `req.query.admin`/`admin=1` reference anywhere in `server.js` or `lib/*.js`). Real protection for Projects and Certificates mutation endpoints is the `requireOwnerSession` middleware (signed HMAC cookie, `lib/certificates.js`), which both routers use and which returns `401` to any request without a valid session — confirmed in code (middleware chain on every POST/PATCH/DELETE route in both `lib/certificates.js` and `lib/projects.js`) and exercised by regression tests in `test/certificates.test.js` and `test/projects.test.js`. Skills has **no backend boundary at all** — see §9.
+## 10. ENVIRONMENT VARIABLES
 
-## 7. Projects
+Секретные значения не выводятся — только имена, назначение и статус обязательности.
 
-- Backend: `lib/projects.js`, mounted at `/api/projects` in `server.js`.
-- Storage: same Timeweb S3 bucket/credentials as Certificates (`createS3Client()`, `process.env.S3_BUCKET_CERTIFICATES` — reused, not a separate bucket), distinguished by key prefix `projects/...` vs certificates' `originals/.../metadata/...` (comment in `lib/projects.js:1-3` states this explicitly).
-- One JSON metadata object per project (`id` must be a UUID, validated via `isValidId`/`UUID_RE`); no managed DB.
-- Fields: title, summary, description, goal, result, status (one of `В разработке`/`MVP`/`Завершён`/`Активный`), category (`ai`/`automation`/`web`/`data`/`other`), tags, cover image (WebP, `multer` memory upload), optional gallery (up to `GALLERY_LIMIT = 8` images), project URL.
-- Auth: mutation routes (`POST /`, `PATCH /:id`, `DELETE /:id`, gallery routes) require `requireSameOrigin` + `requireOwnerSession`, reusing the certificates owner session (same cookie, `Path=/api`).
-- Fallback behavior: the frontend renders one hardcoded client-side fallback card (`id:'terrain-intel'`) when no real backend TerraIntel project exists yet, and a similar temporary ResellFlow placeholder that self-hides once a real backend record with a matching slug/title exists (`public/index.html` ~line 3452-3456). **This fallback card is purely a Projects-section UI placeholder and is not the same thing as the actual separate TerraIntel sub-application** (§12) — they must not be conflated.
-- Mobile: `cardTitle(p)` derives a shortened display title by truncating at the first " — " when the full title exceeds 28 characters; rendered into both a `.title-full` and a `.title-short` `<span>` inside the project card `<h2>`, with CSS toggling which is visible (desktop default: `.title-short{display:none}`; `@media(max-width:900px)`: `.title-full{display:none}`, `.title-short{display:inline}`).
-- **Known P3 issue:** both spans are always present in the DOM; since CSS `display:none` does not remove text from `textContent`/`innerText`, a raw text read of the `<h2>` concatenates both the full and short title (e.g. "Audit CRUD ProjectAudit CRUD Project"). This has **no real-user or screen-reader impact** (hidden content is excluded from the accessibility tree) but can affect raw-DOM text reads, copy/paste, and SEO scraping of that heading. Recommended as a small, separate follow-up PR rather than bundled into unrelated work.
+### Portfolio (ядро)
 
-## 8. Certificates
+| VARIABLE | MODULE | REQUIRED | DEFAULT | PURPOSE |
+|---|---|---|---|---|
+| `POLZA_API_KEY` | AI-ассистент портфолио (`/api/ai`) | да (иначе `/api/ai` отвечает 500) | — | ключ Polza AI, только на сервере |
+| `PORT` | server.js | нет | `3000` | порт, на котором слушает Express |
 
-- Backend: `lib/certificates.js`, mounted at `/api/certificates`.
-- Storage: Timeweb Cloud S3 (`S3_ENDPOINT`, `S3_BUCKET_CERTIFICATES`, `S3_PUBLIC_BASE_URL`), accessed via a **module-level singleton `S3Client`** (`createS3Client()` — instantiated once per process, not per request; this was the PR #26 change, previously a fresh client was created on every call).
-- Categories, metadata (title, description, category, created_at), original file + generated preview, public URL construction (`publicUrlFor`).
-- Admin auth: `POST /login` (bcrypt against `ADMIN_PASSWORD_HASH`, rate-limited 10/15min) sets a signed cookie (`signSession`/`verifySession`, HMAC-SHA256 with `SESSION_SECRET`); `GET /session` reports authentication state; all mutating routes require `requireSameOrigin` + `requireOwnerSession` (401 otherwise).
-- CRUD: `POST /`, `PATCH /:id` (title/description/preview), `DELETE /:id`.
-- **PR #26 changes specifically:**
-  - `createS3Client()` turned into a module-level singleton (`sharedS3Client`), avoiding a fresh client (and its connection pool) on every request.
-  - A 60-second in-memory TTL cache (`aiSummaryCache`, `AI_SUMMARY_CACHE_TTL_MS = 60_000`) around `getCertificatesSummaryForAI()`, which previously fanned out across all categories on S3 on *every single* `/api/ai` call.
-  - `invalidateAiSummaryCache()` exported and called at three points: after a successful certificate create (`POST /`), update (`PATCH /:id`), and delete (`DELETE /:id`), each right before the success response is sent — so the AI's certificate context is never stale for longer than one write-to-next-read gap, and any stale window is bounded by the 60s TTL even without a write.
-  - Why: `/api/ai` was issuing a full 6-category S3 `ListObjectsV2`/`GetObject` fan-out, plus a brand-new `S3Client` (and therefore a fresh connection/handshake), on every single question — a real, code-level inefficiency independent of actual Polza/Timeweb network latency.
-  - Tests added: singleton-identity test for `createS3Client`, a cache-bypass test for `options.s3`, and a create→update→delete cache-invalidation test (using the file's pre-existing `request2`/`login2` second-router-instance pattern to avoid colliding with the shared login rate-limiter budget used by earlier tests in the same file).
+### TerraIntel
 
-## 9. Skills
+| VARIABLE | MODULE | REQUIRED | DEFAULT | PURPOSE |
+|---|---|---|---|---|
+| `POLZA_API_KEY` | TerraIntel (`/api/terraintel/analyze`) | да (тот же ключ, что у Portfolio AI) | — | тот же ключ Polza AI используется и здесь |
+| `TERRAINTEL_MODEL` | TerraIntel | нет | `sber/gigachat-2` | модель для интерпретации аномалий |
+| `TERRAINTEL_RATE_LIMIT` | TerraIntel | нет | `10` | запросов с одного IP за 15 минут |
+| `TERRAINTEL_DAILY_LIMIT` | TerraIntel | нет | `200` | общий дневной лимит AI-запросов (in-memory, сбрасывается по UTC-дате) |
+| `TERRAINTEL_TIMEOUT_MS` | TerraIntel | нет | `30000` (диапазон 5000–60000) | таймаут запроса к Polza |
 
-- **No backend of any kind.** There is no `/api/skills` route in `server.js`, and no `lib/*skills*` module exists (confirmed by grep and pinned by `test/skills-public-admin.test.js`'s own assertions).
-- All data lives in the visitor's own browser `localStorage`, key `evgeny-portfolio-skills-v1`. "Editing" as admin only ever writes to that one browser's local storage — it is never shared, never synced, never seen by any other visitor or by the real site owner remotely.
-- `?admin=1` is a frontend-only flag (`const ADMIN=new URLSearchParams(location.search).get('admin')==='1'`), independently derived in the Skills IIFE, gating the Edit button (`editBtn.hidden=!ADMIN`) and the `mode()`/click-handler/`save()` functions at multiple defense-in-depth layers.
-- **PR #25** (merge commit `c7fb831bbcf9be461428866d16ee27efb72831ec`) fixed the original bug: the Edit/Save/Cancel controls had **no ADMIN gate at all** and were fully visible and usable by any public visitor (writing only to their own browser, but still a real UX/security-model violation — looked like a real "anyone can edit the site" bug).
-- **PR #26** (merge commit `9b3101b5a9a60ec46e5c04647948c03665b705e8`) added a `pageshow` listener re-asserting `editBtn.hidden` on bfcache back/forward restoration (Safari/Firefox can restore the exact pre-gate DOM from cache without re-running the page's `<script>`), plus a regression test confirming there is exactly one Skills render path in the whole page (no duplicate/legacy second render path that could bypass the gate).
+### Certificates / Projects (общий S3-бэкенд)
 
-## 10. AI assistant
+| VARIABLE | MODULE | REQUIRED | DEFAULT | PURPOSE |
+|---|---|---|---|---|
+| `S3_ENDPOINT` | Certificates + Projects | да | — | endpoint Timeweb Cloud S3 |
+| `S3_REGION` | Certificates + Projects | нет | `ru-1` | регион S3 |
+| `S3_BUCKET_CERTIFICATES` | Certificates + Projects | да | — | имя бакета (используется ОБОИМИ модулями, имя исторически про сертификаты) |
+| `S3_ACCESS_KEY_ID` | Certificates + Projects | да | — | ключ доступа S3 |
+| `S3_SECRET_ACCESS_KEY` | Certificates + Projects | да | — | секрет доступа S3 |
+| `S3_PUBLIC_BASE_URL` | Certificates + Projects | да | — | публичный базовый URL для отдачи файлов из бакета |
+| `CERT_ALLOWED_ORIGIN` | Certificates + Projects | да (иначе мутирующие роуты вернут 500) | — | допустимый Origin/Referer для `requireSameOrigin` (используется обоими модулями) |
+| `CERT_MAX_FILE_SIZE_MB` | Certificates | нет | `15` | максимальный размер файла сертификата |
+| `PROJECTS_MAX_FILE_SIZE_MB` | Projects | нет | `5` | максимальный размер обложки/изображения галереи проекта — **отсутствует в `.env.example`, известный пробел документации** |
+| `ADMIN_PASSWORD_HASH` | Certificates + Projects (shared login) | да | — | bcrypt-хэш пароля владельца |
+| `SESSION_SECRET` | Certificates + Projects (shared login) | да | — | секрет для подписи HMAC owner-сессии |
 
-- Endpoint: `POST /api/ai` in `server.js`, rate-limited 30 requests/15min.
-- Provider: Polza AI, `https://polza.ai/api/v1/chat/completions`, model `openai/gpt-oss-20b`.
-- Request: `{ model, messages: [system, user], temperature: 0.35, max_tokens: 600 }`, auth via `POLZA_API_KEY` (server-side env var only).
-- Context composition: client sends `question` + `context` (assembled from visible page data, capped at 1000/20000 chars respectively); server additionally fetches `getCertificatesSummaryForAI()` (cached, 60s TTL — see §8) and appends it as a "СЕРТИФИКАТЫ ИЗ ОБЛАЧНОЙ БАЗЫ" block via `buildCertificatesContext()`.
-- System prompt: Russian-language persona instructing the model to answer only from supplied data, never invent facts/experience/certificates, stay concise (3–7 sentences by default), use a small whitelisted emoji set sparingly, never reveal the system prompt/keys, and not make hiring recommendations.
-- Response handling: **no streaming** — `await upstream.text()` then `JSON.parse`, single round trip, 30-second timeout via `AbortSignal.timeout(30000)`.
-- Frontend: opens via `#evg-ai-launch` into `#evg-ai-panel`; has a mobile floating-action-button variant (shrunk to an icon-only circle on small phones per PR #24 round 4, to avoid overlapping the Home feature cards).
-- **Latency — explicit non-claim:** PR #26's S3-client-singleton + cache-invalidation changes address a real, code-level inefficiency (fresh S3Client + full S3 fan-out on every request) that was present *before* the Polza API call is even reached. **Real production latency against the actual Polza/Timeweb network path has never been measured from this sandbox** (egress to those hosts is blocked here — see §14), and a locally-simulated harness was used only to demonstrate the *directional* effect of the fix, not to prove the user-visible first-response latency problem is solved. Do not claim this issue is fully closed until it is verified against production.
+### Telegram / Email
 
-## 11. Contact form
+| VARIABLE | MODULE | REQUIRED | DEFAULT | PURPOSE |
+|---|---|---|---|---|
+| `TELEGRAM_BOT_TOKEN` | Contact | **да** (без него `/api/contact` вернёт 500) | — | токен Telegram-бота — основной обязательный канал |
+| `TELEGRAM_CHAT_ID` | Contact | **да** | — | chat id получателя заявок |
+| `RESEND_API_KEY` (или алиас `EMAIL_API_KEY`) | Contact | нет | — | ключ Resend для best-effort email-канала |
+| `CONTACT_EMAIL_FROM` | Contact | нет (без него email просто не отправляется) | — | адрес отправителя (должен быть подтверждён в Resend) |
+| `CONTACT_EMAIL_TO` | Contact | нет | `cmrrus@rambler.ru` | адрес получателя email-копии |
 
-- Endpoint: `POST /api/contact`, rate-limited 5 requests/15min.
-- Fields: `name` (≥2 chars), `contact` (≥3 chars), `project_type` (optional), `message` (≥10 chars), plus a hidden `company` honeypot field (bots get a silent `204`).
-- Server-side anti-duplicate fingerprinting (`ip|name|contact|message`, 10-minute window) returns `409` for an exact repeat.
-- Delivery: Telegram is the **required primary channel** (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` — plain-text message, no `parse_mode`, so nothing user-typed can inject Telegram markup); if either is missing the endpoint returns `500` rather than silently dropping the submission. Email via Resend (`RESEND_API_KEY`/`CONTACT_EMAIL_FROM`) is a best-effort secondary channel whose failure never affects the response.
-- Frontend: a contact modal/form in `public/index.html`'s Contacts section; public, no auth.
+---
 
-## 12. Mobile (PR #24 — merge commit `4c368d428731cfa0e287fd491b322f12fbec39ad`)
+## 11. PRODUCTION / TIMEWEB
 
-A multi-round mobile responsive overhaul, with these confirmed elements present in the current code:
-- Burger-menu mobile navigation; enlarged touch targets (buttons sized for ≥44px minimum tap area, visible e.g. in `.project-filters button{min-width:78px;min-height:44px}`).
-- `env(safe-area-inset-*)` handling and a dedicated mobile header treatment.
-- About section's multi-state interactive panel (originally found to overlap the node-orbit visual on mobile in an earlier round; fixed in "Round 3" — `bae2b91` — "fix About detail-panel overlap").
-- Projects: mobile card redesign including full-bleed covers (`margin:-13px -13px 14px -13px` pattern) and the `.title-full`/`.title-short` dual-span pattern (§7).
-- Certificates: mobile card redesign per "Round 4"/`7847cc1` mockup alignment pass.
-- Contacts: icon/help block redesign, extended "atmosphere" background treatment (Round 3).
-- AI assistant: mobile FAB shrunk to an icon-only circle on small phones to stop overlap with Home feature cards (Round 4, `c95b878`).
-- `100dvh` usage and `visualViewport` API handling for on-screen-keyboard-aware layout (used in earlier certificate-upload-modal fixes, PR #10/#11, carried forward).
-- `@media(hover:hover) and (pointer:fine)` gating for hover-only effects (so touch devices don't get stuck hover states) — used throughout, e.g. `.project-filters button:hover`, `.contact-grid>a:hover`.
-- `@media(prefers-reduced-motion:reduce)` rules disabling transitions/scroll-behavior for users who request reduced motion.
-- Breakpoints observed in the CSS include `max-width:900px` (tablet/mobile boundary, used for the Projects title-swap and layout reflow), `max-width:520px` (small-phone-specific sizing), and `min-width:1700px` (wide-desktop grid widening).
-- This PR also removed the unused, render-blocking Supabase SDK `<script>` tag from the page head (see §13) as part of the same "fix unused blocking Supabase CDN" change (PR title: "Mobile responsive overhaul + fix unused blocking Supabase CDN").
-- Legal/Privacy pages, dialogs, and the AI panel were all verified (in earlier sessions covered by this history) to open/close correctly on both desktop and mobile viewports as part of this PR's verification rounds.
-
-## 13. TerraIntel
-
-A **wholly separate interface** that must not be broken while working on the main portfolio. Protected scope:
-- `public/terraintel/**` (frontend: `index.html` + `vendor/` MapLibre GL JS 5.7.1)
-- `lib/terraintel.js` (backend: AI analyze endpoint, own rate limiter/daily cap/timeout/config, all read from env vars prefixed `TERRAINTEL_*`)
-- `test/terraintel.test.js`
-- Routes: `/api/terraintel/*`, `/terraintel/`
-
-It shares nothing with the main site's Projects/Certificates/Skills/Contact/AI code — different AI model (`sber/gigachat-2` vs the main site's `openai/gpt-oss-20b`), different system prompt, different rate limits, same-origin only (no CORS, no Cloudflare Worker — per PR #7's explicit migration away from that architecture).
-
-## 14. Storage (Supabase history)
-
-Supabase is **no longer the primary storage for portfolio data**:
-- Certificates moved to Timeweb S3 in PR #8/subsequent (per PR history, "Certificates: Supabase → Timeweb Cloud S3").
-- Projects moved to the same Timeweb S3 backend in **PR #23** (merge commit `570b05f770cc42b7cf71596e5238a03c8aef2baf`, "Projects section: migrate from Supabase to own backend + Timeweb Cloud S3").
-- The frontend's Supabase SDK `<script>` tag was removed in **PR #24**; confirmed via an explicit code comment still present in `public/index.html` (~line 1710): *"The Supabase SDK `<script>` tag that used to load here is gone: confirmed unused anywhere in public/ (no window.supabase/createClient/db.from(/db.storage/db.auth/signInWithPassword/portfolio_projects references)..."*
-- **Do not reintroduce Supabase without an explicit reason** — it has been deliberately migrated away from for both Projects and Certificates.
-- **Remaining legacy references found during this audit (flagging, not fixing):**
-  - `README.md` is stale: it still describes "проекты и изображения проектов из Supabase" and "сертификаты из Supabase Storage" and lists "Supabase Database, Storage и RLS" in the Stack/Architecture sections, and its `project structure` diagram omits `lib/certificates.js`/`lib/projects.js`/`public/terraintel` details that actually exist. This is a documentation accuracy gap, not a functional Supabase dependency.
-  - The Projects section's hardcoded TerraIntel fallback card (§7) still lists `'Supabase'` as one of its display tags (`tags:['Python','AI','SQL','API','Supabase','GeoPandas','Leaflet']`) — a stale label on a placeholder card, not an actual data dependency.
-  - `supabase/projects_contacts.sql` still exists in the repo as a legacy SQL schema file, kept for historical reference, not read by any running code.
-
-## 15. Auth / Security
-
-- `?admin=1` is **never** backend auth — it is purely a frontend UI-visibility signal, independently re-derived by each of Projects/Certificates/Skills (§6).
-- Real protection for Projects and Certificates: `requireOwnerSession` middleware (signed HMAC-SHA256 cookie via `SESSION_SECRET`), applied via `requireSameOrigin, requireOwnerSession` on every mutating route in both `lib/certificates.js` and `lib/projects.js`.
-- Confirmed behavior (code-level, backed by regression tests in `test/certificates.test.js` and `test/projects.test.js`): POST/PATCH/DELETE without a valid session → `401 {"error":"Требуется вход владельца."}`; public GET routes → `200`, no auth required.
-- `requireSameOrigin` additionally rejects (`403`) any mutating request whose Origin/Referer doesn't match `CERT_ALLOWED_ORIGIN`.
-- Login (`POST /api/certificates/login`) is itself rate-limited (10/15min) and uses `bcrypt.compare` against `ADMIN_PASSWORD_HASH` (never a plaintext password in code or env).
-- **Skills is the one exception**: no backend at all, so there is nothing server-side to lock down — protection is frontend-only (markup `hidden` + function-level `if(!ADMIN)return` guards + `pageshow` re-assertion, §9). This is architecturally different from, and not comparable in risk to, the Projects/Certificates model, since nothing Skills' "admin mode" does ever leaves the visitor's own browser.
-- `helmet` is applied with CSP disabled (explicit tradeoff, documented in `server.js`, to keep the existing inline-style/script single-file frontend working).
-
-## 16. Deployment
-
-- Hosting: **Timeweb Cloud App Platform**.
-- Branch: deploys from `main`, auto-deploy (per README "Production" section and prior session's confirmed deploy-on-merge behavior).
-- Start command: `npm start` (`node server.js`).
+- Хостинг: **Timeweb Cloud App Platform**.
+- Деплой — из ветки `main`.
+- Start command: `npm start` (→ `node server.js`).
 - Health check: `GET /health`.
 - Production URL: `https://supaplex777-evgeny-portfolio-timeweb-1140.twc1.net/`.
-- **This sandbox cannot reach `twc1.net`** — egress is blocked by this environment's network policy (confirmed repeatedly via proxy status checks in prior sessions). Checking the deployed SHA, verifying the Skills fix, or measuring real AI latency against production **must be done manually by the user**, e.g. by comparing `curl https://supaplex777-evgeny-portfolio-timeweb-1140.twc1.net/health` timing/response and checking the Timeweb dashboard's deployed commit against `9b3101b5a9a60ec46e5c04647948c03665b705e8`.
+- **Эта песочница не может достучаться до `*.twc1.net`** — egress заблокирован сетевой политикой окружения. Проверка реально задеплоенного коммита, работоспособности Telegram/AI на проде, задержки ответов — всё это нужно делать вручную владельцем или из окружения с доступом к сети, не отсюда.
+- **Важно не превращать временный инцидент в постоянный факт**: в истории проекта была как минимум одна ситуация, когда после деплоя сайт временно не открывался у части пользователей — расследование (не из этой песочницы) показало, что причиной был синхронный блокирующий `<script>`-тег Supabase SDK в `<head>`, который мог зависать при недоступности `cdn.jsdelivr.net`; тег был удалён в рамках мобильного прохода по адаптивности. Это зафиксированная и исправленная история, а не текущая проблема — не стоит пересказывать её как актуальный открытый инцидент.
+- Автодеплой при мерже в `main` ранее предполагался (по описанию в README), но прямого подтверждения автоматического редеплоя на Timeweb из этой песочницы получить нельзя — если задача требует уверенности в этом, стоит уточнить у пользователя или проверить в панели Timeweb.
 
-## 17. Tests
+---
 
-Current baseline: **94/94 passing** on `main` @ `9b3101b5a9a60ec46e5c04647948c03665b705e8` (just re-run in this session via `npm test`, no code changes made before or after).
+## 12. TESTS
 
-Test files:
-- `test/certificates.test.js` — largest file; covers public GET routes, admin login/session, CRUD auth boundaries (401 without session), the PR #26-added `createS3Client` singleton test, cache-bypass-for-`options.s3` test, and the create/update/delete cache-invalidation regression test.
-- `test/certificates-rotate.test.js` — tests for the standalone upload-preview rotation helper.
-- `test/contact.test.js` — `/api/contact` validation, honeypot, dedupe, Telegram/email delivery paths.
-- `test/projects.test.js` — public GET routes, CRUD auth boundaries (PATCH/DELETE-without-session → 401, added in PR #25), gallery routes.
-- `test/seed-resellflow.test.js` — tests for the idempotent ResellFlow seed script.
-- `test/skills-public-admin.test.js` — source-level assertions on `public/index.html` pinning the ADMIN gate, the `mode()`/click-handler/`save()` guards, the `pageshow` re-assertion (PR #26), the "exactly one Skills render path" invariant, and the "no `/api/skills` backend exists" invariant.
-- `test/terraintel.test.js` — TerraIntel analyze endpoint, rate limiting, JSON extraction tolerance.
+Команда: `npm test` → `node --test test/*.test.js`. Сеть и реальные ключи не нужны — все внешние вызовы (Polza AI, Telegram API, S3) подменяются заглушками/фейковыми клиентами.
 
-Regression tests added and when: PR #25 added the Skills public/admin test file plus PATCH/DELETE-without-session 401 tests for both Projects and Certificates; PR #26 extended `skills-public-admin.test.js` with the `pageshow` and single-render-path tests, and extended `certificates.test.js` with the S3-singleton, cache-bypass, and cache-invalidation tests.
+| Файл | Что тестирует |
+|---|---|
+| `test/certificates.test.js` (самый большой) | публичные GET-роуты, логин/сессия владельца, 401 без сессии на всех мутирующих роутах, синглтон `createS3Client`, кэш `getCertificatesSummaryForAI` и его инвалидация при create/update/delete |
+| `test/certificates-rotate.test.js` | чистые функции поворота превью (`normalizeRotation`, `isSwapped`, `rotatedCanvasSize`) |
+| `test/contact.test.js` | валидация формы, honeypot, дедупликация, успешная/неуспешная доставка в Telegram (моки через `test/helpers/mock-fetch-preload.js`), коды 500/502/503/409 |
+| `test/projects.test.js` | публичные GET-роуты, 401 без сессии на всех мутирующих роутах (включая PATCH/DELETE), валидация полей/категорий/статусов, лимит галереи (8 изображений), каскадное удаление, видимость черновиков только владельцу |
+| `test/seed-resellflow.test.js` | идемпотентность скрипта `scripts/seed-resellflow.js` (повторный запуск не создаёт дубликат) |
+| `test/skills-public-admin.test.js` | source-level проверки `public/index.html`: ADMIN-гейт существует, кнопка редактирования скрыта по умолчанию, защита на уровне функций, повторное применение гейта на `pageshow`, отсутствие дублирующего рендер-пути, отсутствие backend-роута у Skills |
+| `test/terraintel.test.js` | валидация payload, whitelist полей к модели, коды ошибок (400/413/429/502/504), фильтрация небезопасных заявлений модели, устойчивость к markdown-обёртке в JSON-ответе |
 
-## 18. Git / PR history
+**Актуальный результат:** 94/94 passing, проверено прямо перед подготовкой этого документа на `main` @ `9b3101b5a9a60ec46e5c04647948c03665b705e8`.
 
-| PR | Merge commit | Goal |
-|---|---|---|
-| #23 | `570b05f770cc42b7cf71596e5238a03c8aef2baf` (2026-10-05) | Migrate Projects off Supabase onto own backend + Timeweb Cloud S3 |
-| #24 | `4c368d428731cfa0e287fd491b322f12fbec39ad` (2026-10-06) | Mobile responsive overhaul across all sections; removed unused blocking Supabase CDN `<script>` |
-| #25 | `c7fb831bbcf9be461428866d16ee27efb72831ec` (2026-10-08) | Fixed Skills edit controls being fully public (no ADMIN gate at all); audited Projects/Certificates and confirmed they were already properly protected |
-| #26 | `9b3101b5a9a60ec46e5c04647948c03665b705e8` (2026-10-08) | Hardened Skills gate against bfcache/`pageshow` restoration; optimized `/api/ai` by reusing one `S3Client` and caching the certificates summary (60s TTL) with explicit invalidation on every certificate write |
+**Smoke-маршруты для ручной/скриптовой проверки после любых изменений:** `GET /`, `GET /health`, `GET /terraintel/`.
 
-Each of these added tests (see §17) and is traceable in `git log` on `main`. Earlier history (PRs #1–#22) covers earlier UI/hero/navigation fixes, the original Telegram contact-notification feature, the ResellFlow placeholder, the original TerraIntel migration off Cloudflare Workers (#7), and the original Certificates Supabase→S3 migration (#8/#9).
+---
 
-## 19. Known issues / open items
+## 13. SAFETY / SECURITY
 
-1. **AI first-response latency** — the S3-layer inefficiency (fresh client + uncached fan-out per request) is fixed in code (PR #26), but **real production Polza/Timeweb network latency has never been measured from this sandbox** and this issue should **not** be considered fully closed until verified against the live production endpoint.
-2. **Projects P3: duplicated title text in DOM** — the `.title-full`/`.title-short` dual-span pattern in the Projects card renderer keeps both spans present in the DOM; `textContent`/raw-DOM extraction may contain both titles, although visually and in the accessibility tree only the active variant is shown. No visual or accessibility impact, but affects raw-DOM reads/copy/SEO. Recommend a small, separate follow-up PR rather than folding it into unrelated work.
-3. **MAX notifications** — explicitly flagged by the user as the next major task for the site; confirmed via code search that **no such feature exists yet anywhere in the repository** (no "MAX" notification code, no related route, no related frontend markup found).
-4. **README.md is stale** (§14) — still describes Projects/Certificates as Supabase-backed and lists Supabase in the Stack section, which no longer matches the actual architecture.
-5. **Supabase tag leftover** on the Projects section's hardcoded TerraIntel fallback card (§7/§14) — cosmetic label text only, not a functional dependency.
-6. **This sandbox cannot verify anything in production** — no claim in this document about live site behavior (as opposed to the committed code) should be treated as confirmed; it is confirmed only for the code at `9b3101b5a9a60ec46e5c04647948c03665b705e8`.
+- **Секреты только в environment variables**, никогда не коммитятся в репозиторий (`.env.example` содержит только шаблон/плейсхолдеры).
+- `POLZA_API_KEY`, ключи S3, `ADMIN_PASSWORD_HASH`, `SESSION_SECRET`, `TELEGRAM_BOT_TOKEN` — используются **только на сервере**, в браузер никогда не передаются.
+- **Rate limits** на всех внешних/дорогих роутах: `/api/contact` (5/15мин), `/api/ai` (30/15мин), `/api/certificates/login` (10/15мин), `/api/terraintel/analyze` (свой лимит на IP + общий дневной бюджет).
+- **Honeypot** и дедупликация по фингерпринту на контактной форме.
+- **Чистка входных данных**: управляющие символы вырезаются, длина полей жёстко ограничена во всех роутерах (`cleanText`/`cleanSingleLineText`/`cleanMultilineText`).
+- **Доступ к S3**: только с сервера, через `@aws-sdk/client-s3`, credentials из env; публичные GET-роуты не требуют авторизации (это ожидаемо — сертификаты/проекты публичны), но все мутации требуют валидной owner-сессии.
+- **Admin-аутентификация**: `?admin=1` в URL — это **исключительно фронтенд-флаг видимости UI**, независимо пересчитываемый в Projects/Certificates/Skills; он никогда не читается и не проверяется backend-ом (подтверждено грепом по `server.js`/`lib/*.js` — нет ни одного `req.query.admin`). Реальная защита — подписанная HMAC-сессия (`requireOwnerSession`), проверяется на каждом мутирующем запросе отдельно от UI-флага. **Путать `?admin=1` с реальной авторизацией — грубая ошибка**, которую стоит явно избегать в будущих задачах.
+- **TerraIntel forbidden claims**: отдельный серверный regex-фильтр (`FORBIDDEN_CLAIMS` в `lib/terraintel.js`) обрезает любые утверждения модели о найденных минах/оружии/боеприпасах или о «безопасной территории», независимо от системного промпта — это второй, независимый уровень защиты, не полагающийся только на поведение модели.
+- **LLM JSON normalization**: оба AI-роута (`/api/ai` неявно через прямой парсинг, `/api/terraintel/analyze` явно через `extractJson`/`normalizeInterpretations`) устойчивы к обёртке ответа модели в \`\`\`json-фенсы и к посторонним id в ответе — маппинг строго по известным id запроса, лишнее отбрасывается.
+- **Риск регрессии в общем приложении**: поскольку всё крутится в одном Express-процессе и один файл `public/index.html` держит почти весь портфолио, случайная правка общего CSS/JS-блока может задеть несколько разделов разом (Projects/Skills/Certificates используют похожие паттерны кода). Изменения в `public/index.html` стоит тестировать по всем разделам, а не только по тому, который менялся.
 
-## 20. Next tasks
+---
 
-Per the user's explicit priority: MAX notifications is the next major feature (not yet started, not yet designed in this repo). The P3 title-duplication issue and the README staleness are candidate small/independent follow-ups. No other outstanding task was specified by the user as of this handoff.
+## 14. CRITICAL PROTECTED AREAS — НЕ ЛОМАТЬ БЕЗ НЕОБХОДИМОСТИ
 
-## 21. Working rules for future agents
+**Portfolio:**
+- `public/index.html` — весь главный сайт в одном файле; любое изменение проверять по всем разделам (Home/About/Projects/Skills/Certificates/Contacts/AI/Legal) и на мобильной+десктопной ширине.
+- `/` — маршрут SPA fallback.
+- `/api/ai` — AI-ассистент портфолио.
+- `/api/contact` — контактная форма, обязательный Telegram-канал.
 
-1. Never edit `main` directly — always create a feature/fix branch first.
-2. For any new task, branch naming should follow the existing convention (`feature/...` or `fix/...`).
-3. Run `npm test` before starting (confirm the baseline, currently 94/94) and again before considering work done.
-4. Use `git diff --stat main...HEAD` and `git diff --name-status main...HEAD` to review the full scope of changes before opening a PR.
-5. Open PRs as **Draft** by default.
-6. **Never merge a PR without the user's explicit permission**, even if all checks pass.
-7. **Never break TerraIntel** (§13's protected file/route list) unless the task is explicitly about TerraIntel.
-8. **Never break the mobile layout** established in PR #24 — check both desktop and mobile viewports for any frontend change.
-9. If the task is explicitly frontend-only, do not touch `server.js`/`lib/*.js` unless the frontend change requires a corresponding, clearly-scoped backend change.
-10. **Do not reintroduce Supabase** without an explicit, stated reason — it was deliberately migrated away from.
-11. Always check public (no `?admin=1`) and admin (`?admin=1` + valid session) behavior **separately** for any change touching Projects, Certificates, or Skills.
-12. **Never treat `?admin=1` as backend authentication** — it is a frontend signal only; real protection is `requireOwnerSession`.
-13. Check both desktop and mobile viewports for any UI change.
-14. Check browser console for new errors after any frontend change.
-15. Check for horizontal overflow/scrollbars after any layout change, especially on mobile widths.
-16. **Only make claims about production behavior if production was actually verified** (reachable and checked) — otherwise state explicitly that it is unverified.
-17. **If the sandbox cannot reach Timeweb/production, say so explicitly** rather than assuming success or failure.
-18. Do not expand scope beyond what was asked — a bug fix doesn't need unrelated refactoring.
-19. P0/P1 issues (real bugs, security gaps) found incidentally may be fixed directly as part of the current task if clearly in scope; genuinely out-of-scope P2/P3 issues should first be recorded (in the PR description or a report) rather than fixed opportunistically.
-20. Keep this document's facts (routes, auth model, file locations, known issues) as the baseline truth for a cold-start agent, but **always re-verify against the actual current `main` HEAD** before acting, since this snapshot will drift out of date as new work merges.
+**TerraIntel (не трогать без явного запроса на работу именно с TerraIntel):**
+- `public/terraintel/**` (включая `vendor/` — локальная копия MapLibre GL JS)
+- `lib/terraintel.js`
+- `test/terraintel.test.js`
+- `/terraintel/`
+- `/api/terraintel/analyze`
 
-## 22. Recovery checklist for new agent
+**Certificates:**
+- `lib/certificates.js` — также содержит общие примитивы (`createS3Client`, `requireSameOrigin`, `requireOwnerSession`, `verifySession`, `parseCookies`), которые переиспользует `lib/projects.js` — менять с осторожностью, поломка здесь задевает оба модуля.
+- `/api/certificates/*`
 
-### Если новый чат получил этот handoff, что делать первым
+**Projects:**
+- `lib/projects.js`
+- `/api/projects/*`
+- переиспользуемая owner-сессия (cookie `cert_admin`, `Path=/api`) — общая с Certificates, менять контракт cookie нельзя без синхронной правки обоих модулей.
+
+**Общая инфраструктура:**
+- `server.js` — порядок монтирования роутеров важен (`/api/terraintel`, `/api/certificates`, `/api/projects` должны стоять **до** SPA-fallback `app.get('*', ...)`).
+- `.env.example` / реальные production-переменные окружения — не удалять и не переименовывать существующие имена переменных без согласования, это сломает production-конфигурацию.
+
+---
+
+## 15. DEVELOPMENT WORKFLOW
 
 1. `git fetch origin main`
-2. `git checkout main`
-3. `git pull origin main`
-4. `git log -1 --oneline` (and `git rev-parse HEAD`)
-5. Confirm the current `main` SHA matches (or note how it has advanced since) `9b3101b5a9a60ec46e5c04647948c03665b705e8`
-6. `npm install` (only if `node_modules/` is missing or `package-lock.json` changed)
-7. `npm test` — confirm the test baseline (94/94 as of this handoff; investigate any new failures before doing anything else)
-8. `git status` — confirm a clean working tree before starting any new work
-9. Read `README.md` (but cross-check it against this handoff's §14 — it is known to be stale in places)
-10. Only then take on a new task — create a feature/fix branch per §21's rules, and treat §§1–20 above as the current factual baseline, re-verified as needed against the live repository.
+2. `git checkout main` → `git pull origin main` — получить актуальный `main`, не полагаться на этот снимок как на текущее состояние.
+3. Создать новую ветку `feature/...` или `fix/...` от актуального `main` под конкретную задачу.
+4. Делать минимальный diff под задачу — не трогать несвязанные модули.
+5. `npm test` — убедиться, что базовая линия тестов (на момент снимка — 94/94) не сломана.
+6. Smoke-проверка `GET /`.
+7. Smoke-проверка `GET /health`.
+8. Smoke-проверка `GET /terraintel/` (даже если задача не про TerraIntel — убедиться, что общий процесс/монтирование роутов не сломано).
+9. `git diff`/`git status` — внимательно проверить итоговый набор изменённых файлов перед коммитом.
+10. Commit с понятным сообщением.
+11. `git push -u origin <branch>`.
+12. Открыть Pull Request с описанием, что и почему изменено.
+13. **Не мержить PR без явного подтверждения пользователя** — ни при каких обстоятельствах, даже если все проверки зелёные.
+14. После подтверждённого мержа — деплой на Timeweb (из `main`), затем production smoke-проверка (`/`, `/health`, при необходимости — конкретный изменённый функционал) по возможности силами пользователя, если у агента нет сетевого доступа к `*.twc1.net`.
 
-HANDOFF READY
+**Запрещено:**
+- Прямые изменения в `main` в обход Pull Request.
+- Скрытые архитектурные изменения, не относящиеся к заявленной задаче (например, тихая правка общего S3-клиента ради несвязанной фичи).
+- Автомерж без подтверждения — даже «только документация» или «только README» мержится по явному запросу пользователя.
+- Вмешательство в модули, не относящиеся к задаче (особенно TerraIntel, если задача не про него).
+
+---
+
+## 16. KNOWN TECH DEBT
+
+| ISSUE | CURRENT IMPACT | FUTURE FIX |
+|---|---|---|
+| Общий монолитный деплой (один Express-процесс на весь сайт + TerraIntel + все API) | Любой краш/утечка памяти в одном модуле может затронуть весь сайт; нет изоляции нагрузки между Portfolio AI и TerraIntel AI | Вынести TerraIntel и/или API в отдельные процессы/сервисы, если нагрузка это оправдает — не критично при текущем масштабе |
+| `README.md` устарел: описывает Projects и Certificates как Supabase-based, хотя оба уже на Timeweb S3 | Вводит в заблуждение нового разработчика/агента, который читает только README | Обновить README (этот handoff уже добавлен туда ссылкой — см. раздел 19.1 процесса) |
+| TerraIntel landing — 2.6 МБ base64-картинка вшита прямо в HTML вместо отдельного WebP-файла | Каждая загрузка `/terraintel/` тянет многократно раздутый HTML | Вынести в `public/terraintel/assets/*.webp`, подключить как обычный `background-image:url(...)` |
+| TerraIntel UI обещает 5 сенсоров и многопроектность, реализована только магнитометрия+GPS в одном localStorage-слоте | Риск завышенных ожиданий у пользователей/комиссии при демонстрации | Либо явно пометить нереализованные части как roadmap в самом UI, либо спроектировать реальную многопроектность с backend-хранилищем |
+| In-memory лимиты (контактная дедупликация, TerraIntel daily budget, rate-limit счётчики) живут только в памяти процесса | Сбрасываются при каждом рестарте/редеплое; не масштабируются на несколько инстансов | Приемлемо при одном инстансе Timeweb App Platform; вынести в Redis/БД только если появится горизонтальное масштабирование |
+| Нет персистентности проекта TerraIntel на сервере (только `localStorage` браузера) | Пользователь теряет результаты анализа при смене браузера/устройства или очистке данных | Спроектировать серверное хранилище проектов TerraIntel, если платформа будет развиваться за пределы учебного MVP |
+| Внешние AI-зависимости (Polza AI для обоих ассистентов) — единая точка отказа | Если Polza недоступна — AI-функции обоих разделов деградируют одновременно (у TerraIntel есть достойный fallback, у Portfolio AI — явная ошибка пользователю) | Не критично для MVP; при необходимости — fallback-провайдер |
+| Доступность Telegram (`api.telegram.org`) — единственный обязательный канал контактной формы | Если Telegram API недоступен — форма целиком недоступна (эндпоинт отдаёт 502/503), email — не подстрахует, т.к. он опционален и идёт только после успешного Telegram | Осознанный компромисс по требованию задачи (Telegram как основной обязательный канал) — фиксировать как факт, не как баг |
+| Зависимость карты TerraIntel от MapTiler (внешний провайдер тайлов, ключ зашит в клиентском JS) | Недоступность MapTiler/блокировка домена ломает страницу «Карта» целиком | Домен-рестрикция ключа в кабинете MapTiler снижает риск злоупотребления ключом, но не снимает зависимость от провайдера |
+| Observability: нет структурированного логирования/метрик/трейсинга, только `console.log`/`console.error` | Расследование инцидентов на проде затруднено без доступа к логам Timeweb | Не критично для текущего масштаба; рассмотреть при росте нагрузки |
+| `public/index.html` (~3550 строк) и `public/terraintel/index.html` — однофайловые фронтенды без сборки | Любая правка требует аккуратного ручного поиска нужного блока в большом файле; риск случайно задеть несвязанный раздел | Осознанный архитектурный выбор для простоты деплоя (никакого build step); не трогать без явного запроса на рефакторинг |
+| `PROJECTS_MAX_FILE_SIZE_MB` используется в коде, но отсутствует в `.env.example` | Новый разработчик может не узнать об этой переменной, не прочитав `lib/projects.js` | Добавить строку в `.env.example` при следующей правке env-документации |
+
+---
+
+## 17. ROADMAP
+
+Ниже — только предложения на основе текущего состояния кода, не подтверждённые пользователем задачи. Не предполагать, что что-либо из этого уже одобрено к разработке.
+
+**P0 (сделать в первую очередь, если задача появится):**
+- Обновить `README.md`, убрав устаревшие упоминания Supabase для Projects/Certificates (чисто документационная правка, низкий риск).
+- Задокументировать `PROJECTS_MAX_FILE_SIZE_MB` в `.env.example`.
+
+**P1:**
+- Вынести 2.6 МБ base64-изображение TerraIntel landing в отдельный WebP-файл — измеримый выигрыш в производительности загрузки при низком риске.
+- Явно пометить на лендинге TerraIntel, какие сенсоры (LiDAR/тепловизор/RGB) — реализованы, а какие — roadmap, чтобы не создавать ложных ожиданий.
+- Добавить предупреждение в TerraIntel при перезаписи единственного сохранённого проекта в `localStorage`.
+
+**P2:**
+- Тесты для фронтенд-логики TerraIntel (`terraDetect`, парсер CSV, расчёт синхронизации) — сейчас этот код полностью непротестирован.
+- Чистка мёртвого/дублирующегося CSS в `public/terraintel/index.html` (несколько поколений мокапов дашборда в одном файле).
+- Рассмотреть реальную многопроектность TerraIntel (серверное хранилище) — только если платформа будет развиваться за пределы учебного MVP, это архитектурно значимое изменение, не делать без отдельного обсуждения с пользователем.
+
+---
+
+## 18. START HERE FOR A NEW AI AGENT
+
+Если этот документ читает новый ИИ-агент без доступа к истории разговора — вот самое важное за 30 пунктов:
+
+1. Repository: `Supaplex777/evgeny-portfolio-timeweb`, рабочая ветка — `main`.
+2. На момент этого снимка `main` был на SHA `9b3101b5a9a60ec46e5c04647948c03665b705e8`, 94/94 теста зелёные — но это снимок, не текущее состояние, см. пункт 30.
+3. Это один монолитный Express-процесс (`server.js`), не микросервисы.
+4. Главный сайт («Portfolio») — почти целиком один файл `public/index.html` (~3550 строк), роутинг разделов через CSS `:target`, без build step.
+5. Модули проекта: Portfolio, TerraIntel, Certificates, Projects, Contact/Telegram, Portfolio AI, Skills (frontend-only).
+6. **TerraIntel полностью независим**: свой фронтенд (`public/terraintel/**`), свой backend (`lib/terraintel.js`), своя AI-модель (`sber/gigachat-2`), свои лимиты, свой роут `/api/terraintel/analyze`. Не трогать без явной задачи именно про TerraIntel.
+7. TerraIntel реально умеет только магнитометрия+GPS/ГЛОНАСС; LiDAR/тепловизор/RGB/многопроектность — это только визуальный макет, не функциональность.
+8. TerraIntel хранит единственный проект только в `localStorage` браузера, backend ничего не хранит.
+9. TerraIntel AI safety: двухуровневая защита — системный промпт + серверный regex-фильтр `FORBIDDEN_CLAIMS`, модель никогда не должна «обнаруживать мины» или «объявлять территорию безопасной».
+10. Certificates (`lib/certificates.js`, `/api/certificates/*`) хранятся на **Timeweb Cloud S3**, Supabase здесь больше не используется.
+11. Projects (`lib/projects.js`, `/api/projects/*`) хранятся в **том же самом** бакете S3, что и Certificates, под префиксом `projects/`. **Supabase для Projects тоже больше не используется** — если видите задачу «мигрировать Projects с Supabase», сначала проверьте код, она уже выполнена.
+12. Certificates и Projects используют одну общую owner-сессию (cookie `cert_admin`, `Path=/api`), логин — `POST /api/certificates/login`.
+13. `?admin=1` в URL — это **только фронтенд UI-флаг видимости**, backend его вообще не читает. Реальная защита мутирующих роутов — `requireOwnerSession` (подписанная HMAC-cookie), проверяемая отдельно сервером.
+14. Contact form (`POST /api/contact`) — **Telegram обязателен** (`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`), без него роут отдаёт 500. Email через Resend — опциональный best-effort второй канал.
+15. Portfolio AI (`POST /api/ai`) и TerraIntel AI (`POST /api/terraintel/analyze`) — это два полностью независимых AI-пути, разные модели, разные промпты, не путать.
+16. Skills — единственный раздел вообще без backend, только `localStorage` браузера посетителя, нет роута `/api/skills`.
+17. Все секреты — только в environment variables, никогда не в репозитории.
+18. Тесты: `npm test` (node:test, без сети и реальных ключей), все внешние вызовы подменены заглушками.
+19. Перед любой работой — запускать `npm test`, сверяться с актуальным количеством тестов (на снимке — 94).
+20. Smoke-маршруты после изменений: `GET /`, `GET /health`, `GET /terraintel/`.
+21. Production — Timeweb Cloud App Platform, деплой из `main`, health-check `/health`. Из типичной песочницы агента `*.twc1.net` обычно недоступен по сети — не выдавать предположения о проде за проверенный факт.
+22. **Никогда не мержить PR без явного подтверждения пользователя**, даже если всё зелёное.
+23. Никогда не удалять существующие feature/fix-ветки без явного запроса.
+24. Не трогать `server.js` без необходимости; если пришлось — порядок монтирования роутеров (`terraintel` → `certificates` → `projects` → SPA fallback) критичен и должен сохраняться.
+25. Не вносить скрытых архитектурных изменений, не относящихся к заявленной задаче.
+26. `README.md` частично устарел (всё ещё упоминает Supabase для Projects/Certificates) — не доверять ему слепо, этот handoff и реальный код приоритетнее.
+27. Известный техдолг и приоритеты доработки — см. разделы 16–17 этого документа; ничего из роадмапа не считается одобренным, пока пользователь явно не попросит.
+28. Любое сомнительное или непроверенное утверждение в разговоре с пользователем помечать как `[UNKNOWN]` или `[PLAN]`, а не выдавать за факт.
+29. Если задача про мобильную адаптацию/верстку — проверять и десктопную, и мобильную ширину, не только одну из них.
+30. Этот документ описывает состояние на конкретный SHA и дату (раздел 1) — он устареет по мере новых PR. Не экономить на перепроверке.
+
+Перед любой новой задачей сначала выполнить `git fetch`, проверить актуальный `main` и не предполагать, что состояние репозитория осталось таким же, как в этом handoff.
