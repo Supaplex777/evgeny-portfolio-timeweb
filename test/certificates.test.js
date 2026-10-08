@@ -267,6 +267,13 @@ test('POST /api/certificates with a valid Origin but no session is rejected', as
   assert.equal(response.status, 401);
 });
 
+// requireOwnerSession runs before the handler looks up the record, so a
+// non-existent id still proves the auth boundary on its own.
+test('PATCH /api/certificates/:id without a session cookie is rejected with 401', async () => {
+  const response = await request('/api/certificates/does-not-matter', { method: 'PATCH' });
+  assert.equal(response.status, 401);
+});
+
 test('login rejects a wrong password and does not set a cookie', async () => {
   const response = await request('/api/certificates/login', {
     method: 'POST',
