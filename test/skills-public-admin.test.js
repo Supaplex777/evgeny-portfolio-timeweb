@@ -72,6 +72,21 @@ test('an authenticated admin (?admin=1) still gets a working editor: button, for
   assert.match(html, /<form class="skill-editor" hidden>/);
 });
 
+test('the edit gate is re-asserted on pageshow (bfcache back/forward restore)', () => {
+  assert.match(
+    html,
+    /window\.addEventListener\('pageshow',\(\)=>\{editBtn\.hidden=editing\?true:!ADMIN;\}\);/,
+    'Safari/Firefox can restore this exact DOM from back/forward cache without re-running the script; the gate must be re-applied on pageshow too'
+  );
+});
+
+test('there is exactly one Skills edit control in the whole page (no duplicate/legacy render path)', () => {
+  const skillsEditButtonMatches = html.match(/data-action="edit">Редактировать<\/button>/g) || [];
+  assert.equal(skillsEditButtonMatches.length, 1, 'if this is ever >1, a second Skills render path has been introduced and needs the same ADMIN gate');
+  const skillsIdMatches = html.match(/id="skills"/g) || [];
+  assert.equal(skillsIdMatches.length, 1, 'there must be exactly one #skills section - a second one would be a second, likely unguarded, render path');
+});
+
 test('Skills truly has no backend mutation endpoint to lock down server-side', () => {
   const serverJs = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   assert.doesNotMatch(serverJs, /\/api\/skills/, 'if a real /api/skills endpoint is ever added, it must ship with its own auth test - this trips the moment one appears unprotected');

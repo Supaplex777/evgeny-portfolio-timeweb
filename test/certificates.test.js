@@ -236,6 +236,81 @@ test('getCertificatesSummaryForAI returns an empty array (never throws) when the
   assert.equal(buildCertificatesContext(summary), '');
 });
 
+test('createS3Client returns the same shared instance on repeated calls', () => {
+  // Previously every call built a brand new S3Client (and with it a brand
+  // new HTTP agent/connection pool); the AI latency audit found this meant
+  // every single /api/ai request paid a fresh connection-setup cost just to
+  // fetch the certificates context. The fix is a module-level singleton -
+  // this is the one part of that fix that's deterministically testable
+  // without a network call.
+  const first = certificates.createS3Client();
+  const second = certificates.createS3Client();
+  assert.equal(first, second, 'createS3Client must return the same cached instance, not a fresh one each call');
+});
+
+test('getCertificatesSummaryForAI({s3}) is never served from the module-level AI-context cache', async () => {
+  // The /api/ai latency fix adds a 60s in-memory cache to avoid re-fetching
+  // the full certificate catalog from S3 on every request - but it must be
+  // completely inert whenever a caller passes its own s3 (every test in this
+  // suite does). Prove it by seeding two DIFFERENT catalogs into the fake S3
+  // back-to-back (metadata objects seeded directly - no login/upload needed,
+  // and no extra hit on the shared login rate limiter) and confirming both
+  // calls reflect their own data, with no stale carry-over from the first
+  // call (which a real cache hit would cause).
+  fakeS3.objects.set('metadata/ai/11111111-1111-4111-8111-111111111111.json', {
+    body: Buffer.from(JSON.stringify({ id: '11111111-1111-4111-8111-111111111111', category: 'ai', name: 'First Catalog Cert', created_at: new Date().toISOString() })),
+    contentType: 'application/json'
+  });
+  const summaryA = await certificates.getCertificatesSummaryForAI({ s3: fakeS3 });
+  assert.equal(summaryA.length, 1);
+  assert.equal(summaryA[0].name, 'First Catalog Cert');
+
+  fakeS3.objects.clear();
+  fakeS3.objects.set('metadata/data/22222222-2222-4222-8222-222222222222.json', {
+    body: Buffer.from(JSON.stringify({ id: '22222222-2222-4222-8222-222222222222', category: 'data', name: 'Second Catalog Cert', created_at: new Date().toISOString() })),
+    contentType: 'application/json'
+  });
+  const summaryB = await certificates.getCertificatesSummaryForAI({ s3: fakeS3 });
+  assert.equal(summaryB.length, 1, 'must reflect the new fake S3 state, not a stale cached result from the first call');
+  assert.equal(summaryB[0].name, 'Second Catalog Cert');
+});
+
+test('create/update/delete each invalidate the AI-context cache so the next read is never stale', async () => {
+  // Uses getCertificatesSummaryForAI({s3, useCache: true}) - the same cache
+  // the real (no-options) production call uses - against this test's own
+  // fakeS3, so the fill/invalidate/refetch behaviour is exercised for real,
+  // not just asserted never to engage (that's the test above this one).
+  // Uses request2/login2 (a second router instance, same fakeS3, its own
+  // independent rate-limiter store - see the comment above server2) so this
+  // doesn't eat into the shared login() budget other tests in this file rely on.
+  const cookie = await login2();
+
+  const createForm = new FormData();
+  createForm.append('id', '3fa85f64-5717-4562-b3fc-2c963f66afc1');
+  createForm.append('category', 'ai');
+  createForm.append('name', 'cache-test.pdf');
+  createForm.append('file', new Blob([Buffer.from('%PDF-1.4 fake')], { type: 'application/pdf' }), 'cache-test.pdf');
+  const created = await (await request2('/api/certificates', { method: 'POST', cookie, body: createForm })).json();
+
+  const afterCreate = await certificates.getCertificatesSummaryForAI({ s3: fakeS3, useCache: true });
+  assert.equal(afterCreate.length, 1);
+  assert.equal(afterCreate[0].name, 'cache-test.pdf', 'first call (cold cache) must reflect the just-created certificate');
+
+  const titleForm = new FormData();
+  titleForm.append('category', 'ai');
+  titleForm.append('title', 'Updated Title After Cache Fill');
+  await request2(`/api/certificates/${created.id}`, { method: 'PATCH', cookie, body: titleForm });
+
+  const afterUpdate = await certificates.getCertificatesSummaryForAI({ s3: fakeS3, useCache: true });
+  assert.equal(afterUpdate.length, 1);
+  assert.equal(afterUpdate[0].name, 'Updated Title After Cache Fill', 'PATCH must invalidate the cache - without it this would still read the pre-update name from the first call');
+
+  await request2(`/api/certificates/${created.id}`, { method: 'DELETE', cookie });
+
+  const afterDelete = await certificates.getCertificatesSummaryForAI({ s3: fakeS3, useCache: true });
+  assert.equal(afterDelete.length, 0, 'DELETE must invalidate the cache - without it this would still return the deleted certificate');
+});
+
 test('PATCH on a well-formed but non-existent id returns 404, not 500, on an empty bucket', async () => {
   const cookie = await login();
   const form = new FormData();
